@@ -5,8 +5,8 @@
 
 set -uo pipefail
 
-VAULT="C:/Users/rprad/Documents/second-brain-memory"
-BACKUP_BASE="C:/Users/rprad/backups/second-brain-memory"
+VAULT="${HYBRID_VAULT:-$HOME/Documents/second-brain-memory}"
+BACKUP_BASE="${HYBRID_BACKUP:-$HOME/backups/second-brain-memory}"
 DATE=$(date +%Y-%m-%d)
 DEST="$BACKUP_BASE/$DATE"
 

@@ -71,12 +71,13 @@ memories-hybrid/
 │   ├── backup.sh            Vault backup (robocopy)
 │   └── prune-memory.py      Auto-prune MEMORY.md
 ├── patches/             ← Engine patches
-│   └── engine.patch         waitForAllIdle fix
+│   ├── llm-runner-force-nonstream.patch
+│   └── pipeline-manager-l3-flush.patch
 ├── docs/                ← Documentation
 │   ├── README.md
 │   ├── README.id.md
 │   ├── ARCHITECTURE.md
-│   └── yourtask.md
+│   └── INSTRUCTION.md
 └── bridge-config.example.json
 ```
 

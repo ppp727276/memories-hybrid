@@ -11,3 +11,9 @@ forge/node_modules/
 mind/node_modules/
 bridge/node_modules/
 tencentdb/
+.DS_Store
+.bun/
+bun.lockb
+dist/
+.env
+.env.*

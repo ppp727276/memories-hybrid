@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/bridge.ts", "src/types.ts", "src/signal-converter.ts"],
-  "exclude": ["node_modules", "dist", "src/seed-runner.ts", "tencentdb", "tencentdb/node_modules", "tencentdb/dist"]
+  "include": ["bridge/src/bridge.ts", "bridge/src/types.ts", "bridge/src/signal-converter.ts"],
+  "exclude": ["node_modules", "dist", "bridge/src/seed-runner.ts", "forge", "forge/node_modules", "forge/dist", "mind"]
 }

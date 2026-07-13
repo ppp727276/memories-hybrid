@@ -9,11 +9,15 @@
 ## Install
 
 ```bash
-cd C:/Users/rprad/Documents/project/memories_hybrid/tencentdb
+cd memories-hybrid
 npm install
+cd forge && npm install
+cd ../mind && bun install
+```
 
-cd C:/Users/rprad/Documents/project/memories_hybrid
-npm install
+Or use one-command:
+```bash
+bash scripts/install.sh
 ```
 
 ## Configure
@@ -24,11 +28,10 @@ cp bridge-config.example.json bridge-config.json
 ```
 
 2. Edit `bridge-config.json`:
-   - `vaultPath`: path ke OSB vault.
-   - `tencentdbPath`: path ke folder `tencentdb`.
+   - `vaultPath`: path ke OSB vault (default `~/Documents/second-brain-memory`).
    - `personaTargetPath`: target `persona-core.md`.
-   - `pluginConfig.llm.apiKey`: ganti placeholder dengan OmniRoute API key.
-   - `pluginConfig.embedding.apiKey`: ganti placeholder dengan OmniRoute API key.
+   - `pluginConfig.llm.apiKey`: ganti placeholder dengan API key.
+   - `pluginConfig.embedding.apiKey`: ganti placeholder dengan API key.
 
    **Security:** jangan commit `bridge-config.json` ke git. Simpan API key di environment variable atau Hermes secret, lalu ganti placeholder saat deploy.
 
@@ -37,7 +40,7 @@ cp bridge-config.example.json bridge-config.json
 If vault belum di-init:
 
 ```bash
-o2b init --vault C:/Users/rprad/Documents/second-brain-memory \
+o2b init --vault ~/Documents/second-brain-memory \
   --agent-name "hybrid-bridge" \
   --timezone "Asia/Jakarta"
 ```
@@ -45,19 +48,19 @@ o2b init --vault C:/Users/rprad/Documents/second-brain-memory \
 Verify vault health:
 
 ```bash
-o2b doctor --vault C:/Users/rprad/Documents/second-brain-memory --repo C:/Users/rprad/AppData/Local/hermes/plugins/open-second-brain
+o2b doctor --vault ~/Documents/second-brain-memory
 ```
 
 ## Run
 
 ### Dry run (tidak jalankan seed, hanya generate input)
 ```bash
-npx tsx src/bridge.ts --config bridge-config.json --dry-run
+npx tsx bridge/src/bridge.ts --config bridge-config.json --dry-run
 ```
 
 ### Run bridge
 ```bash
-npx tsx src/bridge.ts --config bridge-config.json
+npx tsx bridge/src/bridge.ts --config bridge-config.json
 ```
 
 ### Typecheck
@@ -75,7 +78,7 @@ npm run typecheck
 ```bash
 curl http://127.0.0.1:20128/v1/embeddings \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $OMNI_ROUTE_API_KEY" \
+  -H "Authorization: Bearer $OMNI_API_KEY" \
   -d '{"model": "queen/text-embedding-v3", "input": "test"}'
 ```
 
@@ -85,25 +88,13 @@ curl http://127.0.0.1:20128/v1/embeddings \
 bash scripts/backup.sh
 ```
 
-Backup target: `C:/Users/rprad/backups/second-brain-memory/<YYYY-MM-DD>`.
+Backup target: `~/backups/second-brain-memory/<YYYY-MM-DD>`.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `Missing script: tdai-seed` | bridge lama spawn `npm run tdai-seed` | Sudah di-fix: bridge sekarang spawn `npx tsx src/seed-runner.ts` |
-| `persona.md` tidak muncul | seed-runtime belum tunggu L2/L3 | Sudah di-patch `waitForAllIdle()` |
+| `persona.md` tidak muncul | seed-runtime belum tunggu L2/L3 | Patch `waitForAllIdle()` sudah applied |
 | Signal diproses berulang kali | Checkpoint corrupt / kosong | Hapus `.hybrid-bridge-checkpoint.json` |
 | Frozen edits hilang | Marker tidak sesuai format | Pastikan `<!-- status: frozen -->` ... `<!-- status: end -->` |
 | Robocopy flag error | MSYS path conversion | Script sudah pakai `MSYS_NO_PATHCONV=1` |
-
-## Re-apply Patch (setelah update TencentDB)
-
-Kalau TencentDB di-update, apply ulang:
-
-```bash
-cd C:/Users/rprad/Documents/project/memories_hybrid
-patch -p1 -d tencentdb < patches/seed-runtime.patch
-```
-
-Atau patch manual sesuai diff di `patches/seed-runtime.patch`.

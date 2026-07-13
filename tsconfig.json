@@ -14,6 +14,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts", "tencentdb/src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tencentdb/node_modules", "tencentdb/dist"]
+  "include": ["bridge/src/**/*.ts", "forge/**/*.ts"],
+  "exclude": ["node_modules", "dist", "forge/node_modules", "forge/dist", "mind"]
 }

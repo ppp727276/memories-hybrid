@@ -7,7 +7,7 @@ Agent (Hermes) adalah consumer dan producer signal bagi sistem hybrid memory. Ag
 
 ```
 User chat → Hermes → OSB captures signal → Cron runs bridge →
-TencentDB enriches → persona-core.md updated → OSB injects active.md →
+Forge enriches → persona-core.md updated → OSB injects active.md →
 Next turn uses richer persona
 ```
 
@@ -29,12 +29,12 @@ Tambahkan ke Hermes cron untuk run tiap 6 jam:
 cron:
   - name: hybrid-memory-bridge
     schedule: "0 */6 * * *"
-    command: "cd C:/Users/rprad/Documents/project/memories_hybrid && npx tsx src/bridge.ts --config bridge-config.json"
+    command: "cd ~/memories-hybrid && npx tsx bridge/src/bridge.ts --config bridge-config.json"
 ```
 
 Or use the `cronjob` tool:
 ```
-cronjob action='create' schedule='0 */6 * * *' prompt='cd C:/Users/rprad/Documents/project/memories_hybrid && npx tsx src/bridge.ts --config bridge-config.json' name='hybrid-memory-bridge' enabled_toolsets='["terminal"]'
+cronjob action='create' schedule='0 */6 * * *' prompt='cd ~/memories-hybrid && npx tsx bridge/src/bridge.ts --config bridge-config.json' name='hybrid-memory-bridge' enabled_toolsets='["terminal"]'
 ```
 
 ## Agent Behavior
@@ -58,8 +58,8 @@ cronjob action='create' schedule='0 */6 * * *' prompt='cd C:/Users/rprad/Documen
 
 ## Tools / Commands
 
-- `npx tsx src/bridge.ts --config bridge-config.json --dry-run` — preview input.
-- `npx tsx src/bridge.ts --config bridge-config.json` — run bridge.
+- `npx tsx bridge/src/bridge.ts --config bridge-config.json --dry-run` — preview input.
+- `npx tsx bridge/src/bridge.ts --config bridge-config.json` — run bridge.
 - `bash scripts/backup.sh` — backup vault.
 
 ## Fallback
