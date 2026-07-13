@@ -1,0 +1,13 @@
+name: open-second-brain
+version: "1.28.0"
+description: "Open Second Brain - native Hermes memory provider backed by an Obsidian-compatible Markdown vault."
+author: "Open Second Brain contributors"
+memory_provider: true
+hooks:
+  - system_prompt_block
+  - prefetch
+  - sync_turn
+  - on_pre_compress
+  - on_session_end
+  - on_memory_write
+  - shutdown

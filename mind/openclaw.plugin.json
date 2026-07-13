@@ -1,0 +1,66 @@
+{
+  "id": "open-second-brain",
+  "name": "Open Second Brain",
+  "description": "Second brain for AI agents using Obsidian-compatible Markdown vaults.",
+  "version": "1.28.0",
+  "activation": { "onStartup": true },
+  "skills": ["./skills"],
+  "contracts": {
+    "tools": [
+      "second_brain_status",
+      "second_brain_query",
+      "second_brain_capture",
+      "event_log_append",
+      "vault_health"
+    ]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "vault": {
+        "type": "string",
+        "description": "Absolute path to the Obsidian-compatible vault directory."
+      },
+      "instanceName": {
+        "type": "string",
+        "description": "Human-readable name for this second brain instance."
+      },
+      "agentName": {
+        "type": "string",
+        "description": "Identity used in Brain/log/*.md event log entries (e.g. 'openclaw-main'). Falls back to VAULT_AGENT_NAME env, then to '@agent'."
+      },
+      "timezone": {
+        "type": "string",
+        "description": "IANA timezone name (e.g. 'Europe/Belgrade', 'America/New_York', 'UTC') used to stamp Brain/log/*.md entries in the user's local time. Falls back to VAULT_TIMEZONE env, then to the host's local clock."
+      },
+      "mcpEnabled": {
+        "type": "boolean",
+        "default": false,
+        "description": "Whether to also expose an MCP stdio server (optional)."
+      }
+    }
+  },
+  "uiHints": {
+    "vault": {
+      "label": "Vault Path",
+      "help": "Absolute path to the Obsidian-compatible vault directory."
+    },
+    "instanceName": {
+      "label": "Instance Name",
+      "help": "Human-readable name for this second brain instance."
+    },
+    "agentName": {
+      "label": "Agent Name",
+      "help": "Identity used in Brain/log/*.md as @agent-name for event log entries."
+    },
+    "timezone": {
+      "label": "Timezone",
+      "help": "IANA timezone name (e.g. Europe/Belgrade) for HH:MM stamps in Brain/log/*.md."
+    },
+    "mcpEnabled": {
+      "label": "Enable MCP Server",
+      "help": "Expose Open Second Brain as an MCP stdio server (optional)."
+    }
+  }
+}

@@ -1,0 +1,202 @@
+# Open Second Brain — runtime hooks
+
+Plugin-bundled lifecycle hooks for Claude Code and Codex. The hooks
+make sure every turn that produces a durable artifact records the
+corresponding event in `Brain/log/<date>.md` (and its JSONL sidecar).
+`Brain/log/` is the single agent-facing log surface; `Daily/` remains
+as the human-CLI surface — populated by `o2b append-event` from
+cron-jobs and shell scripts, not by agents.
+
+Hermes and OpenClaw deliberately do **not** load these hooks. Hermes
+already injects an identity / writer-tool reminder via its
+`pre_llm_call` plugin shim, so the same nudge arrives through a
+different channel without duplicating subsystems. OpenClaw's native
+JS plugin format predates these hooks. If either runtime grows a
+Claude-style hook schema later, point its config at `hooks/hooks.json`
+and the same scripts will work — they only depend on the documented
+hook payload shape, not on the runtime.
+
+## What the hooks do
+
+| Event              | Matcher                               | Behaviour                                                                                                                                                                              |
+| ------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SessionStart`     | `startup\|resume\|clear\|compact`     | Injects the budgeted `Brain/active.md` body (default 8,000 chars, `active.inject_budget_chars` in `_brain.yaml`) and records a non-blocking `session-lifecycle` observation. The `compact` matcher is the post-compaction re-injection path.   |
+| `UserPromptSubmit` | `*`                                   | Captures explicit `@osb feedback ...` markers from the submitted prompt immediately through the signal/dedup boundary.                                                                 |
+| `PostToolUse`      | `brain_feedback`                      | Replays successful `brain_feedback` tool input immediately through the same signal/dedup boundary.                                                                                     |
+| `PostToolUse`      | `Write\|Edit\|MultiEdit\|apply_patch` | Emits `additionalContext` pointing at the three Brain writer tools. The full reminder is shown once per Claude Code session; later writes get a one-line nudge (Codex one-shot runs always get the full text).                                  |
+| `PostCompact`      | `manual\|auto`                        | Records a post-compact lifecycle observation only. Current Claude Code has no PostCompact hook event and rejects `additionalContext` under that name - re-injection moved to the SessionStart `compact` matcher; the registration stays as a silent no-op for older runtimes. |
+| `Stop`             | (every Stop)                          | If the turn produced a durable artifact and none of `brain_feedback` / `brain_apply_evidence` / `brain_note` landed, returns `decision: "block"` once, then lets the second Stop pass. |
+| `SessionEnd`       | `*`                                   | Records a non-blocking lifecycle observation for session close.                                                                                                                        |
+
+The Stop guardrail respects the runtime-provided `stop_hook_active`
+flag: it fires at most once per turn, so the agent can deliberately
+decide that an edit was trivial and skip logging by just finishing
+again. No deadlocks.
+
+## JSONL sidecar
+
+Every event the writer lands in `Brain/log/<date>.md` is mirrored to
+`Brain/log/<date>.jsonl` in the same atomic step (one
+`proper-lockfile` lock for the pair). Machine consumers
+(`o2b discipline report` today, future tooling tomorrow) read JSONL
+through `src/core/brain/log-jsonl.ts:readLogDay`, which falls back to
+parsing markdown on days that pre-date v0.10.8. Hand-editing the
+markdown does not break the reader; deleting the JSONL forces the
+fallback path until the next write rebuilds it.
+
+The retired `event_log_append` MCP tool no longer exists in any
+runtime as of §32 (v0.10.8). The bash CLI `o2b append-event` still
+works for cron-jobs / shell scripts that target `Daily/`, but it no
+longer counts as a brain event for the Stop guardrail.
+
+As of v0.10.10 a third bash needle joins the guardrail-clearing
+set: `o2b brain note` — the CLI mirror of the MCP `brain_note`
+tool. Cron jobs and shell scripts can land a Brain-native
+narrative-milestone event without going through the MCP surface;
+the matching turn clears the Stop guardrail the same way an MCP
+call would.
+
+## Files
+
+- `hooks.json` — lifecycle config picked up by both runtimes. Claude
+  Code looks for `hooks/hooks.json` at the plugin root by convention;
+  Codex auto-loads the same file when the plugin manifest's `"hooks"`
+  field points at it (set in both `.codex-plugin/plugin.json` and
+  `plugins/codex/.codex-plugin/plugin.json`).
+
+  Layout caveat: Codex's marketplace source is
+  `./plugins/codex/`, so the Codex side only sees what lives under
+  that subdirectory. The repo exposes the hooks tree there via a
+  `plugins/codex/hooks → ../../hooks` symlink (same pattern as
+  `plugins/codex/skills`). The symlink target is relative, so it
+  resolves correctly inside a cloned repo too — but it does assume
+  the consumer copies the whole repo, not just `plugins/codex/`. If
+  Codex ever switches to a "ship subtree only" extraction model, the
+  symlink will dangle and the hooks tree will need to move
+  physically under `plugins/codex/hooks/` (or be duplicated).
+
+- `session-capture.ts` — Bun entry script that handles lifecycle
+  observations and immediate marker/tool-feedback capture. It emits
+  no stdout to the runtime; writes go to Brain signals plus
+  `session-lifecycle` audit/log rows.
+- `post-write-reminder.ts` / `stop-log-guardrail.ts` — Bun entry
+  scripts. They are tiny by design: they parse stdin, query
+  `lib/transcript.ts` and `lib/detect.ts`, and emit the hook's JSON
+  response on stdout. Never block on errors.
+- `lib/stdin.ts` — read the single JSON object both runtimes send on
+  stdin.
+- `lib/transcript.ts` — JSONL parser that recognises both the
+  Claude Code shape (top-level `{type:"user"|"assistant", message:
+{content:[...]}}`) and the Codex shape (`{type:"response_item",
+payload:{type:"function_call"|"custom_tool_call", name}}`).
+- `lib/detect.ts` — canonical lists of artifact / log tool names.
+- `lib/messages.ts` — reminder + block text. Kept here so it can be
+  unit-tested without a hook subprocess.
+
+## How both runtimes find the hook commands
+
+Each `hooks.json` command resolves the launcher version-currently, with
+a fallback, and can never block:
+
+```sh
+r="$CLAUDE_PLUGIN_ROOT"; if [ -n "$r" ] && [ -x "$r/scripts/o2b-hook" ]; then exec "$r/scripts/o2b-hook" <name>; fi; command -v o2b-hook >/dev/null 2>&1 && exec o2b-hook <name>; exit 0
+```
+
+- **Claude Code** sets `CLAUDE_PLUGIN_ROOT` to the *active* plugin
+  version directory, so the command runs `scripts/o2b-hook` from the
+  version Claude Code just loaded — never a stale copy.
+- **Codex** does not export a plugin-root env var, so it falls through
+  to the PATH `o2b-hook` shim (`o2b install-cli` puts it on PATH; on a
+  server it points at the stable checkout, which never rotates).
+- If neither resolves, the command `exit 0`s — a missing launcher is a
+  no-op, never a blocked turn.
+
+`scripts/o2b-hook` itself resolves the checkout root in the same order
+(`$CLAUDE_PLUGIN_ROOT` → its own realpath → `$OSB_PLUGIN_ROOT`) and is
+**fail-soft**: any unresolved hook, missing Bun, or other internal
+error prints a warning to stderr and exits `0`. It must never `exit 2`
+— that is the only hook exit code Claude Code treats as blocking.
+
+The global `~/.local/bin/{o2b,o2b-hook,vault-log}` symlinks are
+self-healing: the `SessionStart` `active-inject` hook calls
+`healCliSymlinks()` from the current checkout, re-pointing a dangling
+or plugin-cache-stale OSB symlink with no user action (it leaves
+stable-directory installs, foreign symlinks, and real files untouched).
+
+> **Invariant for anyone editing hooks, the launcher, or install-cli —
+> updates must never break existing installs.** A plugin update rotates
+> the versioned cache directory under `~/.claude/plugins/cache/...`, so
+> any resolution that pins to a specific version path (a PATH symlink
+> into a cache dir, a hard-coded version, a stored absolute path) WILL
+> dangle on the next update. Always:
+> 1. resolve the launcher via `$CLAUDE_PLUGIN_ROOT` first (Claude Code
+>    re-reads `hooks.json` from the active version each session, so a
+>    correct command shape here repairs an already-broken install on the
+>    next update);
+> 2. keep hooks fail-soft — `exit 0` on every internal error, never
+>    `exit 2`, never a hard `command not found` trace as the only path;
+> 3. keep symlink resolution self-healing and conservative (never hijack
+>    a stable-dir or foreign symlink).
+>
+> These three properties are locked by `tests/hooks/o2b-hook.test.ts`,
+> `tests/hooks/hooks-json-shape.test.ts`, and
+> `tests/cli/install-cli.test.ts`. See [`docs/updating.md`](../docs/updating.md).
+
+## Local dev loop
+
+The plugin lives at `/srv/projects/open-second-brain/` and Claude
+Code / Codex are wired to that directory via local marketplaces
+(`extraKnownMarketplaces` in `~/.claude/settings.json`,
+`[marketplaces.open-second-brain] source_type = "local"` in
+`~/.codex/config.toml`). Both runtimes cache the installed plugin,
+so edits to `hooks/*.ts` don't auto-propagate.
+
+After changing a hook script:
+
+```bash
+# Claude Code: refresh the local-marketplace cache and reinstall.
+claude plugin marketplace update open-second-brain
+claude plugin update open-second-brain@open-second-brain
+
+# Codex: re-add the marketplace (there is no "upgrade" for local
+# marketplaces; remove + add wipes the cache and re-stages the
+# plugin tree from /srv/projects/open-second-brain/plugins/codex/).
+codex plugin marketplace remove open-second-brain
+codex plugin marketplace add /srv/projects/open-second-brain
+```
+
+Then exercise the hook end-to-end:
+
+```bash
+# Claude Code
+claude -p 'create a tiny note.md in /tmp/x with content hello' \
+    --output-format=stream-json --verbose --include-hook-events \
+    --allowedTools 'Write Read' --add-dir /tmp/x
+
+# Codex
+codex exec --skip-git-repo-check 'create a tiny /tmp/x/note.md ...'
+```
+
+Expect the stream to show `hook_started` / `hook_response` events
+around each Write and around the Stop event; the agent's first reply
+gets `decision: "block"` and it has to either log or send a second
+finishing message.
+
+## Unit tests
+
+`tests/hooks/*.test.ts` exercises the library and spawns the two
+hook entry scripts as subprocesses with synthetic stdin / JSONL
+transcripts. Run with:
+
+```bash
+bun test tests/hooks/
+```
+
+The subprocess tests inherit the test runner's cwd, not the
+plugin's, which matches production behaviour: Claude Code and Codex
+both spawn the hook in the user's session cwd, not in the plugin
+checkout. The scripts therefore must NEVER use `process.cwd()` to
+locate plugin files — resolve paths via `import.meta.url` or
+relative imports, as the current code does. If you ever need to
+read a vault path, take it from the hook payload or the persisted
+plugin config.

@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shade <shade@rprad>
+Date: Sun, 12 Jul 2026 12:00:00 +0800
+Subject: [PATCH] Force non-streaming requests to OmniRoute
+
+OmniRoute returns text/event-stream by default. The AI SDK expects a
+single JSON response for generateText(), causing "Invalid JSON response"
+failures. Inject stream: false into every /chat/completions request body
+and forward through the configured (e.g. no-think) fetch wrapper.
+
+---
+ src/adapters/standalone/llm-runner.ts | 28 +++++++++++++++++++++-----
+ 1 file changed, 23 insertions(+), 5 deletions(-)
+
+---
+ a/src/adapters/standalone/llm-runner.ts
++++ b/src/adapters/standalone/llm-runner.ts
+@@ -197,22 +197,36 @@ export class StandaloneLLMRunner implements LLMRunner {
+       `tools=${this.enableTools}, timeout=${timeoutMs}ms`,
+     );
+ 
+-    // Create OpenAI-compatible provider via AI SDK
+-    // Use "compatible" mode to call /chat/completions (not Responses API),
+-    // which works with all OpenAI-compatible backends (DeepSeek, Qwen, etc.)
+-    const provider = createOpenAI({
+-      baseURL: this.config.baseUrl,
+-      apiKey: this.config.apiKey,
+-      compatibility: "compatible",
+-      ...(this.customFetch ? { fetch: this.customFetch } : {}),
+-    });
+-
+     // For pure text tasks like L1 extraction, avoid exposing any tools.
+     const tools = this.enableTools
+       ? createSandboxedTools(workspaceDir, this.logger)
+       : undefined;
+ 
++    const originalFetch = this.customFetch ?? globalThis.fetch;
++    const forceNonStreamFetch: typeof fetch = async (input, init) => {
++      // OmniRoute defaults to streaming; force non-streaming for AI SDK
++      let modifiedInit = init;
++      if (init && typeof init.body === "string") {
++        try {
++          const body = JSON.parse(init.body);
++          if (body && typeof body === "object") {
++            body.stream = false;
++            modifiedInit = { ...init, body: JSON.stringify(body) };
++          }
++        } catch {
++          // ignore parse failures
++        }
++      }
++      return originalFetch(input, modifiedInit);
++    };
++
+     try {
++      const provider = createOpenAI({
++        baseURL: this.config.baseUrl,
++        apiKey: this.config.apiKey,
++        compatibility: "compatible",
++        fetch: forceNonStreamFetch,
++      });
+       const result = await generateText({
+         model: provider.chat(this.model),
+         system: params.systemPrompt,

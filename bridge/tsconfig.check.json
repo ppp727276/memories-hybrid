@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/bridge.ts", "src/types.ts", "src/signal-converter.ts"],
+  "exclude": ["node_modules", "dist", "src/seed-runner.ts", "tencentdb", "tencentdb/node_modules", "tencentdb/dist"]
+}

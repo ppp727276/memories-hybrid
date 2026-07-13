@@ -1,0 +1,257 @@
+/**
+ * `o2b brain clusters run|list` (t_4ba927ec): graph-wide community
+ * detection over the search index's link graph. `run` detects
+ * communities (deterministic label propagation), materializes one
+ * derived note per community under `Brain/clusters/`, removes stale
+ * generated notes, and records one `communities` metric. `list`
+ * reads the generated notes back. Fail-soft on a missing index.
+ *
+ * Exit codes: 0 on success/fail-soft skip, 1 on an operational
+ * failure, 2 on usage errors.
+ */
+
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+import {
+  detectCommunities,
+  materializeClusterNotes,
+  COMMUNITY_DEFAULT_MIN_SIZE,
+} from "../../../core/brain/link-graph/communities.ts";
+import { graphStats } from "../../../core/brain/link-graph/graph-index.ts";
+import { appendMetric } from "../../../core/brain/metrics.ts";
+import {
+  createSafeguard,
+  resolveSafeguardTimeoutMs,
+  SafeguardTimeoutError,
+} from "../../../core/brain/safeguard.ts";
+import { evaluateStaleness } from "../../../core/brain/staleness.ts";
+import { isoSecond } from "../../../core/brain/time.ts";
+import { resolveSearchConfig } from "../../../core/search/index.ts";
+import { Store } from "../../../core/search/store.ts";
+import { SearchError } from "../../../core/search/types.ts";
+import { listVaultPages, parseFrontmatter } from "../../../core/vault.ts";
+import { brainVerbContext, fail, ok, okJson, parse } from "../helpers.ts";
+
+const USAGE =
+  "usage: o2b brain clusters run [--min-size N] [--batch-size N] [--if-stale] | list  [--vault <path>] [--json]";
+
+/** Vault-relative directory holding the materialized cluster notes. */
+const CLUSTERS_DIR_REL = join("Brain", "clusters");
+
+/**
+ * Compare the materialized cluster notes against the vault's notes (their
+ * inputs) for the `--if-stale` fast-path. Cluster notes are excluded from the
+ * input set so an output never counts as its own input.
+ */
+function clustersStaleness(vault: string): ReturnType<typeof evaluateStaleness> {
+  const clustersDir = join(vault, CLUSTERS_DIR_REL);
+  const inputs = listVaultPages(vault)
+    .map((p) => p.path)
+    .filter((p) => !p.startsWith(clustersDir));
+  const outputs = existsSync(clustersDir)
+    ? readdirSync(clustersDir)
+        .filter((f) => f.endsWith(".md"))
+        .map((f) => join(clustersDir, f))
+    : [];
+  return evaluateStaleness(inputs, outputs);
+}
+
+export async function cmdBrainClusters(argv: string[]): Promise<number> {
+  const { flags, positional } = parse(argv, {
+    vault: { type: "string" },
+    "min-size": { type: "string" },
+    "batch-size": { type: "string" },
+    "if-stale": { type: "boolean" },
+    json: { type: "boolean" },
+  });
+  const asJson = flags["json"] === true;
+  const action = positional[0];
+  if ((action !== "run" && action !== "list") || positional.length !== 1) {
+    process.stderr.write(`${USAGE}\n`);
+    return 2;
+  }
+
+  const { config, vault } = brainVerbContext(flags);
+
+  try {
+    if (action === "list") {
+      const dir = join(vault, "Brain", "clusters");
+      if (!existsSync(dir)) {
+        if (asJson) okJson({ clusters: [] });
+        else ok("no cluster notes yet - run: o2b brain clusters run");
+        return 0;
+      }
+      const clusters = readdirSync(dir)
+        .filter((f) => f.endsWith(".md"))
+        .toSorted()
+        .map((f) => {
+          const [meta] = parseFrontmatter(join(dir, f));
+          return meta["kind"] === "brain-cluster"
+            ? {
+                path: `Brain/clusters/${f}`,
+                cluster: String(meta["cluster"] ?? ""),
+                size: Number(meta["size"] ?? 0),
+                density: Number(meta["density"] ?? 0),
+                generated_at: String(meta["generated_at"] ?? ""),
+              }
+            : null;
+        })
+        .filter((c) => c !== null);
+      if (asJson) okJson({ clusters });
+      else if (clusters.length === 0) ok("no generated cluster notes");
+      else {
+        for (const c of clusters) {
+          ok(`${c.cluster}: ${c.size} notes, density ${c.density} (${c.path})`);
+        }
+      }
+      return 0;
+    }
+
+    // run
+    const minSize = parsePositiveInt(flags["min-size"] as string | undefined);
+    if (minSize === false) {
+      process.stderr.write("brain clusters run: --min-size must be a positive integer\n");
+      return 2;
+    }
+    const batchSize = parsePositiveInt(flags["batch-size"] as string | undefined);
+    if (batchSize === false) {
+      process.stderr.write("brain clusters run: --batch-size must be a positive integer\n");
+      return 2;
+    }
+
+    // Staleness fast-path (t_845fe240): when the materialized cluster notes are
+    // already newer than every input note, skip the recompute entirely. Opt-in
+    // so the default behavior is unchanged; records a freshness-skip metric.
+    if (flags["if-stale"] === true) {
+      const staleness = clustersStaleness(vault);
+      if (staleness.fresh) {
+        try {
+          appendMetric(vault, {
+            surface: "communities",
+            runAt: isoSecond(new Date()),
+            payload: {
+              skipped: "fresh",
+              newest_input_ms: staleness.newestInputMs ?? 0,
+              oldest_output_ms: staleness.oldestOutputMs ?? 0,
+            },
+          });
+        } catch {
+          // Metrics are observability, not correctness.
+        }
+        if (asJson) okJson({ communities: 0, skipped: "fresh" });
+        else ok("clusters run: outputs already fresh - skipped (--if-stale)");
+        return 0;
+      }
+    }
+
+    const searchConfig = resolveSearchConfig({ vault, configPath: config ?? undefined });
+    let store: Store;
+    try {
+      store = await Store.open(searchConfig, { mode: "read" });
+    } catch (exc) {
+      if (
+        exc instanceof SearchError &&
+        (exc.code === "INDEX_MISSING" || exc.code === "SCHEMA_MISMATCH")
+      ) {
+        if (asJson) okJson({ communities: 0, reason: "index not built" });
+        else ok("clusters run: search index not initialised - run: o2b search index");
+        return 0;
+      }
+      throw exc;
+    }
+
+    const now = new Date();
+    try {
+      const safeguard = createSafeguard({
+        operation: "clusters",
+        timeoutMs: resolveSafeguardTimeoutMs("clusters", config ?? undefined),
+      });
+      const communities = detectCommunities(store, {
+        ...(minSize !== undefined ? { minSize } : {}),
+        safeguard,
+      });
+      // O(1) from the snapshot detectCommunities just built (same index
+      // revision -> cache hit, no second graph rebuild).
+      const stats = graphStats(store, { top: 5 });
+      const result = materializeClusterNotes(vault, communities, {
+        store,
+        now,
+        ...(batchSize !== undefined ? { batchSize } : {}),
+      });
+      const failedBatches = result.batches?.filter((b) => b.error !== undefined) ?? [];
+      try {
+        appendMetric(vault, {
+          surface: "communities",
+          runAt: isoSecond(now),
+          payload: {
+            communities: communities.length,
+            sizes: communities.map((c) => c.size),
+            written: result.written.length,
+            removed: result.removed.length,
+            min_size: minSize ?? COMMUNITY_DEFAULT_MIN_SIZE,
+            ...(result.batches
+              ? { batches: result.batches.length, failed_batches: failedBatches.length }
+              : {}),
+          },
+        });
+      } catch {
+        // Metrics are observability, not correctness.
+      }
+      if (asJson) {
+        okJson({
+          communities: communities.map((c) => ({
+            id: c.id,
+            size: c.size,
+            density: c.density,
+            members: c.members.map((m) => m.path),
+          })),
+          graph: {
+            documents: stats.documentCount,
+            linked_nodes: stats.nodeCount,
+            edges: stats.edgeCount,
+            top_degree: stats.topByDegree,
+          },
+          written: result.written,
+          removed: result.removed,
+          ...(result.batches ? { batches: result.batches } : {}),
+        });
+      } else if (communities.length === 0) {
+        ok("clusters run: no communities at the current threshold");
+        ok(`  graph: ${stats.nodeCount} linked nodes, ${stats.edgeCount} edges`);
+      } else {
+        ok(`clusters run: ${communities.length} communit${communities.length === 1 ? "y" : "ies"}`);
+        for (const c of communities) {
+          ok(`  ${c.id}: ${c.size} notes, density ${c.density.toFixed(2)}`);
+        }
+        ok(`  graph: ${stats.nodeCount} linked nodes, ${stats.edgeCount} edges`);
+        if (result.batches) {
+          ok(
+            `  batches: ${result.batches.length} (${failedBatches.length} failed)` +
+              (failedBatches.length > 0
+                ? ` - failed: ${failedBatches.map((b) => `#${b.index} (${b.error})`).join(", ")}`
+                : ""),
+          );
+        }
+        if (result.removed.length > 0) ok(`  removed stale: ${result.removed.join(", ")}`);
+      }
+      return 0;
+    } finally {
+      await store.close();
+    }
+  } catch (exc) {
+    const timedOut = exc instanceof SafeguardTimeoutError;
+    const message = `clusters ${action} failed: ${(exc as Error).message ?? exc}`;
+    if (asJson) {
+      okJson({ ok: false, message, ...(timedOut ? { timed_out: true } : {}) });
+      return 1;
+    }
+    return fail(message);
+  }
+}
+
+function parsePositiveInt(raw: string | undefined): number | undefined | false {
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : false;
+}

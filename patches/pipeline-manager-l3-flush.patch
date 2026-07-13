@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shade <shade@rprad>
+Date: Sun, 12 Jul 2026 11:00:00 +0800
+Subject: [PATCH] Trigger L3 persona generation during pipeline flush
+
+When the pipeline is destroyed, _doFlush() sets this.destroyed=true
+before draining queues. The L2 runner calls triggerL3() during flush,
+but triggerL3() short-circuited because this.destroyed was true,
+so persona generation never ran. Allow force-triggering L3 during
+destroy so the final persona.md is written before shutdown.
+
+---
+ src/utils/pipeline-manager.ts | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+---
+ a/src/utils/pipeline-manager.ts
++++ b/src/utils/pipeline-manager.ts
+@@ -938,15 +938,15 @@ export class MemoryPipelineManager {
+     this.armL2MaxInterval(sessionKey);
+ 
+     // Trigger L3
+-    this.triggerL3();
++    this.triggerL3(this.destroyed);
+   }
+ 
+   // ============================
+   // Internal: L3 queue (global, dedup)
+   // ============================
+ 
+-  private triggerL3(): void {
+-    if (this.destroyed) return;
++  private triggerL3(force: boolean = false): void {
++    if (!force && this.destroyed) return;
+ 
+     if (this.l3Running) {
+       // L3 is in progress — mark pending so it runs again after current finishes
