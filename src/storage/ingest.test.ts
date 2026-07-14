@@ -15,7 +15,7 @@ describe("CapricornStorage ingest", () => {
     const vaultPath = join(tempDir, "vault");
     const config = mergeConfig({
       vault: { path: vaultPath, auto_sync: true },
-      storage: { db_path: dbPath, vector_provider: "none" },
+      storage: { db_path: dbPath, vector_provider: "none", vector_model: "", vector_dimensions: 0 },
     });
     storage = new CapricornStorage(dbPath, vaultPath, config);
   });
