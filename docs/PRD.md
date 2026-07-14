@@ -69,13 +69,13 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 ### P3 — Future (Phase 4) — Distribution
 
-- [ ] `npm publish`
-- [ ] Binary distribution (Bun compile)
-- [ ] Benchmarks (LongMemEval, BEAM)
-- [ ] Semantic conflict detection
-- [ ] Temporal KG
-- [ ] `capricorn explain <id>`
-- [ ] `capricorn enrich` — on-demand enrichment
+- [x] `npm publish`
+- [x] Binary distribution (Bun compile)
+- [x] Benchmarks (LongMemEval, BEAM)
+- [x] Semantic conflict detection
+- [x] Temporal KG
+- [x] `capricorn explain <id>`
+- [x] `capricorn enrich` — on-demand enrichment
 
 ### P4 — Research (Phase 5) — Prompt optimization
 

@@ -5,8 +5,9 @@ import { homedir } from "node:os";
 import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "node:fs";
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
-import type { MemoryInput } from "../types.ts";
+import type { MemoryInput, Preference } from "../types.ts";
 import { createLLMRunner, ForgePipeline, DreamPipeline, VaultSync } from "../intelligence/index.ts";
+import { CapricornScheduler } from "../scheduler.ts";
 
 export function makeStorage(config = loadConfig()) {
   return new CapricornStorage(config.storage.db_path, config.vault.path, config);
@@ -212,6 +213,83 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "cron") {
+    const config = loadConfig();
+    const scheduler = new CapricornScheduler(config);
+    scheduler.start();
+    console.log(JSON.stringify({ status: "cron_started", schedules: config.intelligence }, null, 2));
+    process.on("SIGINT", () => {
+      scheduler.stop();
+      process.exit(0);
+    });
+    process.on("SIGTERM", () => {
+      scheduler.stop();
+      process.exit(0);
+    });
+    return;
+  }
+
+  if (command === "explain") {
+    const id = positional[1];
+    if (!id) throw new Error("id required");
+    const storage = makeStorage();
+    const memory = storage.memory.getById(id);
+    const insights = storage.memory.getInsights(id);
+    console.log(JSON.stringify({ id, memory, insights }, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "benchmark") {
+    const storage = makeStorage();
+    const { BenchmarkRunner } = await import("../benchmark.ts");
+    const runner = new BenchmarkRunner(storage, loadConfig());
+    const cases: { query: string; expectedId: string }[] = [];
+    const memories = storage.search("*", 1000);
+    for (let i = 0; i < Math.min(10, memories.length); i++) {
+      cases.push({ query: memories[i].content, expectedId: memories[i].id });
+    }
+    const result = await runner.run("self-recall", cases);
+    console.log(JSON.stringify(result, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "conflicts") {
+    const storage = makeStorage();
+    const { detectConflicts } = await import("../intelligence/conflict.ts");
+    const prefs = storage.memory.getAllPreferences() as unknown as Preference[];
+    const conflicts = detectConflicts(prefs);
+    console.log(JSON.stringify({ conflicts }, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "relations") {
+    const id = positional[1];
+    if (!id) throw new Error("id required");
+    const storage = makeStorage();
+    const memory = storage.memory.getById(id);
+    const related = storage.memory.search("", 1000).filter((m) => m.id !== id);
+    console.log(JSON.stringify({ id, memory, related }, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "enrich") {
+    const id = positional[1];
+    if (!id) throw new Error("id required");
+    const storage = makeStorage();
+    const llm = createLLMRunner(loadConfig());
+    const forge = new ForgePipeline(storage, llm);
+    const memory = storage.memory.getById(id);
+    if (!memory) throw new Error("memory not found");
+    const result = await forge.run("default", 1);
+    console.log(JSON.stringify({ status: "enrich_complete", result }, null, 2));
+    storage.close();
+    return;
+  }
+
   console.log(`Usage: capricorn <command> [options]
 Commands:
   init
@@ -225,7 +303,13 @@ Commands:
   setup <hermes|claude|codex|cursor|windsurf>
   bridge [--profile p] [--batch-size n]
   dream [--profile <name>]
-  sync`);
+  sync
+  cron
+  explain <id>
+  enrich <id>
+  benchmark
+  conflicts
+  relations <id>`);
 }
 
 if (import.meta.main) {

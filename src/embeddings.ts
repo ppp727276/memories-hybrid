@@ -12,11 +12,39 @@ class NoneEmbedder implements Embedder {
   dimensions(): number { return 0; }
 }
 
+function djb2Hash(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) + hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function seededRandom(seed: string): number {
+  return (Math.sin(djb2Hash(seed)) + 1) / 2;
+}
+
 class LocalEmbedder implements Embedder {
+  private dims: number;
+  constructor(dims: number) {
+    this.dims = dims;
+  }
   enabled(): boolean { return true; }
-  dimensions(): number { return 0; }
-  async embed(): Promise<number[]> {
-    throw new Error("local embedder not implemented");
+  dimensions(): number { return this.dims; }
+  async embed(text: string): Promise<number[]> {
+    const words = text.toLowerCase().split(/\W+/).filter(Boolean);
+    if (words.length === 0) return new Array(this.dims).fill(0);
+    const vec = new Array(this.dims).fill(0);
+    for (let d = 0; d < this.dims; d++) {
+      let sum = 0;
+      for (const word of words) {
+        sum += seededRandom(`${word}:${d}`) * 2 - 1;
+      }
+      vec[d] = sum / words.length;
+    }
+    const norm = Math.sqrt(vec.reduce((a, b) => a + b * b, 0));
+    return norm === 0 ? vec : vec.map((v) => v / norm);
   }
 }
 
@@ -56,6 +84,6 @@ class ApiEmbedder implements Embedder {
 export function createEmbedder(config: CapricornConfig): Embedder {
   if (config.storage.vector_provider === "none") return new NoneEmbedder();
   if (config.storage.vector_provider === "api") return new ApiEmbedder(config);
-  if (config.storage.vector_provider === "local") return new LocalEmbedder();
+  if (config.storage.vector_provider === "local") return new LocalEmbedder(config.storage.vector_dimensions);
   return new NoneEmbedder();
 }

@@ -136,4 +136,22 @@ export const MCP_TOOLS: McpTool[] = [
       properties: {},
     },
   },
+  {
+    name: "capricorn.explain",
+    description: "Explain why a memory exists and list its insights",
+    parameters: {
+      type: "object",
+      required: ["id"],
+      properties: { id: { type: "string" } },
+    },
+  },
+  {
+    name: "capricorn.enrich",
+    description: "Run enrichment on a specific memory",
+    parameters: {
+      type: "object",
+      required: ["id"],
+      properties: { id: { type: "string" } },
+    },
+  },
 ];

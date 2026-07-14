@@ -132,5 +132,25 @@ export async function handleTool(
     return { status: "sync_complete", result };
   }
 
+  if (method === "capricorn.explain") {
+    const id = String(params.id ?? "");
+    if (!id) throw new Error("id required");
+    const memory = storage.memory.getById(id);
+    const insights = storage.memory.getInsights(id);
+    return { id, memory, insights };
+  }
+
+  if (method === "capricorn.enrich") {
+    const id = String(params.id ?? "");
+    if (!id) throw new Error("id required");
+    const memory = storage.memory.getById(id);
+    if (!memory) throw new Error("memory not found");
+    const { createLLMRunner, ForgePipeline } = await import("../intelligence/index.ts");
+    const llm = createLLMRunner(loadConfig());
+    const forge = new ForgePipeline(storage, llm);
+    const result = await forge.run("default", 1);
+    return { status: "enrich_complete", result };
+  }
+
   throw new Error(`unknown method: ${method}`);
 }

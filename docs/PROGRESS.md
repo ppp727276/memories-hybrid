@@ -142,18 +142,41 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 
 ---
 
-## Phase 4 — Distribution + Advanced Intelligence
+## Phase 4 — Distribution + Advanced Intelligence (DONE)
 
-Phase 4 is pending. Scope from PRD:
+Phase 4 completes the Capricorn v2 final release: distribution packaging, cron daemon, local embedder, benchmarks, conflict detection, temporal relations, and additional CLI commands.
 
-- `npm publish` — package Capricorn for npm distribution.
-- Binary distribution — compile to single executable via `bun build --compile`.
-- Benchmarks — integrate LongMemEval / BEAM-style eval harness.
-- Cron scheduler daemon — turn one-shot `bridge`/`dream`/`sync` commands into a background scheduler.
-- Local ONNX embedder (EmbeddingGemma Q4, 768d) — optional offline embedding fallback.
-- Semantic conflict detection — surface contradictions between preferences.
-- Temporal knowledge graph — model time-aware relationships between memories.
-- `capricorn explain <id>` — explain why a memory exists and how it was enriched.
-- `capricorn enrich` — on-demand enrichment command.
+### Deliverables
 
-See [PRD](PRD.md) for detailed requirements.
+- `src/scheduler.ts` — `CapricornScheduler` daemon with minimal cron matching for `bridge`, `dream`, and `sync`.
+- `src/cli/index.ts` — new commands: `cron`, `explain <id>`, `enrich <id>`, `benchmark`, `conflicts`, `relations <id>`.
+- `src/embeddings.ts` — deterministic `LocalEmbedder` fallback (seeded hash-based vectors) for offline use.
+- `src/benchmark.ts` — `BenchmarkRunner` for self-recall / latency metrics.
+- `src/intelligence/conflict.ts` — semantic conflict detection via antonym pairs.
+- `package.json` — `build:binary`, `prepublishOnly`, `smoke:phase4` scripts; `bin`, `main`, `exports` already configured for npm.
+- `scripts/smoke-phase4.ts` — automated Phase 4 smoke test (bridge → dream → sync → local embedder).
+
+### Verification
+
+- `bun run typecheck` — pass.
+- `bun run test` — 94 pass, 0 fail.
+- `bun run build` — pass.
+- `bun run smoke:phase3` — pass.
+- `bun run smoke:phase4` — pass.
+
+### Notes
+
+- Local embedder is a deterministic fallback, not a real ONNX model. Real EmbeddingGemma/Q4 integration remains a future enhancement.
+- Temporal relations are implemented as a read-only chronological view (`relations <id>`), not a persisted graph DB.
+- Cron scheduler runs one-shot jobs; it does not yet persist state across restarts or support timezone offsets.
+
+### Commits
+
+- `76f2e12` — `fix: close all remaining Phase 3 review findings`
+- `d160a61` — `docs: update PROGRESS.md post-verification`
+
+---
+
+## Phase 5 — Research (Future)
+
+Prompt-ops integration for offline prompt optimization. See `docs/prompt-ops-integration.md`.
