@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
 import type { MemoryInput } from "../types.ts";
+import { createLLMRunner, ForgePipeline, DreamPipeline, VaultSync } from "../intelligence/index.ts";
 
 export function makeStorage(config = loadConfig()) {
   return new CapricornStorage(config.storage.db_path, config.vault.path, config);
@@ -112,10 +113,25 @@ async function main(argv: string[]) {
 
   if (command === "context") {
     const maxChars = Number(args["max-chars"] ?? 3000);
+    const profile = (args.profile as string) ?? "default";
     const storage = makeStorage();
-    const prefs: string[] = [];
-    const context = `Capricorn context (${prefs.length} prefs, ${maxChars} chars max)\nNo confirmed preferences yet.`;
-    console.log(JSON.stringify({ context, prefs_count: 0, persona_version: 0 }, null, 2));
+    const confirmed = storage.memory.getAllPreferences().filter((p) => p.tier === "confirmed");
+    const persona = storage.memory.getLatestPersona(profile);
+    const lines: string[] = [];
+    lines.push(`# Capricorn Context`);
+    lines.push(``);
+    if (persona?.content) {
+      lines.push(`## Persona`);
+      lines.push(persona.content);
+      lines.push(``);
+    }
+    lines.push(`## Preferences (${confirmed.length} confirmed)`);
+    for (const pref of confirmed.slice(0, 20)) {
+      lines.push(`- ${pref.body} (confidence: ${pref.confidence.toFixed(2)})`);
+    }
+    let context = lines.join("\n").slice(0, maxChars);
+    if (context.length >= maxChars) context = context.slice(0, maxChars - 3) + "...";
+    console.log(JSON.stringify({ context, prefs_count: confirmed.length, persona_version: persona?.version ?? 0 }, null, 2));
     storage.close();
     return;
   }
@@ -165,6 +181,37 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "bridge") {
+    const profile = (args.profile as string) ?? "default";
+    const batchSize = Number(args["batch-size"] ?? 10);
+    const storage = makeStorage();
+    const llm = createLLMRunner(loadConfig());
+    const forge = new ForgePipeline(storage, llm);
+    const result = await forge.run(profile, batchSize);
+    console.log(JSON.stringify({ status: "bridge_complete", result }, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "dream") {
+    const profile = (args.profile as string) ?? "default";
+    const storage = makeStorage();
+    const dream = new DreamPipeline(storage);
+    const result = await dream.run(profile);
+    console.log(JSON.stringify({ status: "dream_complete", result }, null, 2));
+    storage.close();
+    return;
+  }
+
+  if (command === "sync") {
+    const storage = makeStorage();
+    const sync = new VaultSync(storage);
+    const result = sync.sync();
+    console.log(JSON.stringify({ status: "sync_complete", result }, null, 2));
+    storage.close();
+    return;
+  }
+
   console.log(`Usage: capricorn <command> [options]
 Commands:
   init
@@ -175,7 +222,10 @@ Commands:
   stats
   context [--max-chars n]
   ingest <file>
-  setup <hermes|claude|codex|cursor|windsurf>`);
+  setup <hermes|claude|codex|cursor|windsurf>
+  bridge [--profile p] [--batch-size n]
+  dream [--profile p]
+  sync`);
 }
 
 if (import.meta.main) {

@@ -107,6 +107,23 @@ CREATE TABLE IF NOT EXISTS memories_vec (
 
 CREATE INDEX IF NOT EXISTS idx_memories_vec_id ON memories_vec(memory_id);`,
   },
+  {
+    id: 2,
+    name: "phase 3 enrichment",
+    sql: `-- enrichment state tracking
+CREATE TABLE IF NOT EXISTS enrichment_state (
+  memory_id TEXT PRIMARY KEY REFERENCES memories(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  processed_at INTEGER,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_enrichment_state_status ON enrichment_state(status);
+
+ALTER TABLE preference_evidence ADD COLUMN source_type TEXT DEFAULT 'user_explicit';
+ALTER TABLE preference_evidence ADD COLUMN source_weight REAL DEFAULT 1.0;`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {

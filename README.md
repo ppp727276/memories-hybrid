@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine for AI agents.
 
-> **Status: pre-alpha.** Phase 1 implementation starting. See [PRD](docs/PRD.md) for status.
+> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending. See [PRD](docs/PRD.md) for status.
 
 ---
 

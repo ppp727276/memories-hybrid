@@ -12,7 +12,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 **Capricorn solves this:** dual-engine architecture that stores AND understands.
 
-> **Status: pre-alpha.** Phase 1 & Phase 2 implemented. Phase 3 pending.
+> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending.
 >
 > See [PROGRESS.md](PROGRESS.md) for implementation status.
 
@@ -24,7 +24,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 |---|---|---|
 | **Phase 1** | ✅ Done | FTS5-only core |
 | **Phase 2** | ✅ Done | Vector search + multi-agent setup |
-| **Phase 3** | ⏳ Pending | Enrichment pipeline port |
+| **Phase 3** | ✅ Done | Enrichment pipeline port |
 | **Phase 4** | ⏸️ Blocked on P3 | Distribution + benchmarks |
 | **Phase 5** | ⏸️ Future | Prompt-ops integration (research) |
 
@@ -58,12 +58,12 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 ### P2 — Nice to Have (Phase 3) — Enrichment
 
-- [ ] Forge pipeline port (L0→L3 from v1)
-- [ ] Dream port (preference compounding)
-- [ ] Validation layer (HyperTune scoring + HaluGard G2-G4)
-- [ ] Confidence scoring with source_weight
-- [ ] Two-way sync vault ↔ SQLite
-- [ ] Cron jobs (bridge 6h, dream 1h)
+- [x] Forge pipeline port (L1→L3 from v1)
+- [x] Dream port (preference compounding)
+- [x] Validation layer (HyperTune + HaluGard G2-G4)
+- [x] Confidence scoring with source_weight
+- [x] Two-way sync vault ↔ SQLite
+- [ ] Cron scheduler daemon (Phase 4) — commands are cron-ready
 
 ### P3 — Future (Phase 4) — Distribution
 

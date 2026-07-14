@@ -1,7 +1,8 @@
 import type { Database } from "bun:sqlite";
-import type { Memory, MemoryInput, SearchResult, StatsResult } from "../types.ts";
+import type { Memory, MemoryInput, SearchResult, StatsResult, SourceType } from "../types.ts";
 import { generateId } from "../utils/id.ts";
 import { runSql, queryAll, queryGet } from "../utils/sqlite.ts";
+import { sourceWeight } from "../intelligence/confidence.ts";
 
 interface MemoryRow {
   id: string;
@@ -20,9 +21,9 @@ export class MemoryStore {
     if (!input.content || input.content.trim().length === 0) throw new Error("content required");
     const now = Date.now();
     const id = generateId("mem");
-    const memory: Memory = {
+    return this.insertMemory({
+      ...input,
       id,
-      content: input.content,
       source: input.source ?? "user",
       session_id: input.session_id ?? null,
       project: input.project ?? null,
@@ -30,7 +31,16 @@ export class MemoryStore {
       metadata: input.metadata ?? {},
       created_at: now,
       updated_at: now,
-    };
+    }, embedding);
+  }
+
+  importMemory(memory: Memory, embedding?: number[]): Memory {
+    const existing = this.getById(memory.id);
+    if (existing) return existing;
+    return this.insertMemory(memory, embedding);
+  }
+
+  private insertMemory(memory: Memory, embedding?: number[]): Memory {
     runSql(
       this.db,
       `INSERT INTO memories (id, content, source, session_id, project, tags, metadata, created_at, updated_at)
@@ -51,7 +61,7 @@ export class MemoryStore {
         "INSERT INTO memories_vec (memory_id, embedding, created_at) VALUES (?, ?, ?)",
         memory.id,
         JSON.stringify(embedding),
-        now,
+        Date.now(),
       );
     }
     return memory;
@@ -119,6 +129,154 @@ export class MemoryStore {
     );
     if (!row) return null;
     return { ...row, tags: parseTags(row.tags), metadata: JSON.parse(row.metadata) } as Memory;
+  }
+
+  // Phase 3: enrichment helpers
+
+  getUnprocessedMemories(limit = 100): Memory[] {
+    const rows = queryAll<Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }>(
+      this.db,
+      `SELECT m.* FROM memories m
+       LEFT JOIN enrichment_state e ON m.id = e.memory_id
+       WHERE e.memory_id IS NULL OR e.status = 'pending'
+       ORDER BY m.created_at ASC
+       LIMIT ?`,
+      limit,
+    );
+    return rows.map((r) => ({ ...r, tags: parseTags(r.tags), metadata: JSON.parse(r.metadata) })) as Memory[];
+  }
+
+  markEnrichmentStatus(memoryId: string, status: "pending" | "done" | "failed", error?: string) {
+    runSql(
+      this.db,
+      `INSERT INTO enrichment_state (memory_id, status, processed_at, attempts, last_error)
+       VALUES (?, ?, ?, 1, ?)
+       ON CONFLICT(memory_id) DO UPDATE SET
+         status = excluded.status,
+         processed_at = excluded.processed_at,
+         attempts = enrichment_state.attempts + 1,
+         last_error = excluded.last_error`,
+      memoryId,
+      status,
+      status === "pending" ? null : Date.now(),
+      error ?? null,
+    );
+  }
+
+  addInsight(memoryId: string, layer: "L0" | "L1" | "L2" | "L3", content: string, metadata: Record<string, unknown> = {}) {
+    const id = generateId("ins");
+    runSql(
+      this.db,
+      `INSERT INTO insights (id, memory_id, content, layer, metadata, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      id,
+      memoryId,
+      content,
+      layer,
+      JSON.stringify(metadata),
+      Date.now(),
+    );
+    return id;
+  }
+
+  getInsights(memoryId: string): { id: string; memory_id: string; content: string; layer: string; metadata: string; created_at: number }[] {
+    return queryAll(this.db, "SELECT * FROM insights WHERE memory_id = ? ORDER BY created_at", memoryId);
+  }
+
+  getAllPreferences(): { id: string; body: string; tier: string; confidence: number; evidence: string; origin: string | null; created_at: number; updated_at: number }[] {
+    return queryAll(this.db, "SELECT * FROM preferences ORDER BY confidence DESC");
+  }
+
+  getPreferenceByBody(body: string): { id: string; body: string; tier: string; confidence: number; evidence: string; origin: string | null; created_at: number; updated_at: number } | null | undefined {
+    return queryGet(this.db, "SELECT * FROM preferences WHERE body = ?", body);
+  }
+
+  createPreference(body: string, origin: string | null = null): string {
+    const id = generateId("pref");
+    const now = Date.now();
+    runSql(
+      this.db,
+      `INSERT INTO preferences (id, body, tier, confidence, evidence, origin, created_at, updated_at)
+       VALUES (?, ?, 'trial', 0.0, '[]', ?, ?, ?)`,
+      id,
+      body,
+      origin,
+      now,
+      now,
+    );
+    return id;
+  }
+
+  updatePreferenceConfidence(prefId: string, confidence: number, tier: "trial" | "confirmed" | "retired") {
+    runSql(
+      this.db,
+      "UPDATE preferences SET confidence = ?, tier = ?, updated_at = ? WHERE id = ?",
+      confidence,
+      tier,
+      Date.now(),
+      prefId,
+    );
+  }
+
+  addPreferenceEvidence(
+    prefId: string,
+    memoryId: string,
+    result: "applied" | "violated" | "outdated",
+    sourceType: SourceType,
+    sessionId: string | null,
+  ) {
+    const id = generateId("pev");
+    const weight = sourceWeight(sourceType);
+    runSql(
+      this.db,
+      `INSERT INTO preference_evidence (id, pref_id, memory_id, result, session_id, source_type, source_weight, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      prefId,
+      memoryId,
+      result,
+      sessionId,
+      sourceType,
+      weight,
+      Date.now(),
+    );
+    return id;
+  }
+
+  getPreferenceEvidence(prefId: string): { id: string; pref_id: string; memory_id: string; result: string; session_id: string | null; source_type: SourceType; source_weight: number; created_at: number }[] {
+    return queryAll(this.db, "SELECT * FROM preference_evidence WHERE pref_id = ? ORDER BY created_at", prefId);
+  }
+
+  getLatestPersona(profile: string): { id: string; profile: string; content: string; version: number; created_at: number } | null | undefined {
+    return queryGet(this.db, "SELECT * FROM personas WHERE profile = ? ORDER BY version DESC LIMIT 1", profile);
+  }
+
+  savePersona(profile: string, content: string): number {
+    const latest = this.getLatestPersona(profile);
+    const version = latest ? latest.version + 1 : 1;
+    const id = generateId("per");
+    runSql(
+      this.db,
+      "INSERT INTO personas (id, profile, content, version, created_at) VALUES (?, ?, ?, ?, ?)",
+      id,
+      profile,
+      content,
+      version,
+      Date.now(),
+    );
+    return version;
+  }
+
+  searchPreferences(query: string, limit = 10): { id: string; body: string; tier: string; confidence: number; evidence: string; origin: string | null; created_at: number; updated_at: number }[] {
+    return queryAll<{ id: string; body: string; tier: string; confidence: number; evidence: string; origin: string | null; created_at: number; updated_at: number }>(
+      this.db,
+      `SELECT * FROM preferences
+       WHERE body LIKE ?
+       ORDER BY confidence DESC
+       LIMIT ?`,
+      `%${query}%`,
+      limit,
+    );
   }
 
   private ftsSearch(queryText: string, limit: number, project: string | null): MemoryRow[] {

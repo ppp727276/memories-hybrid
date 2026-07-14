@@ -82,22 +82,42 @@ Phase 2 adds vector search, hybrid FTS+vector recall, multi-agent MCP setup, and
 
 ---
 
-## Phase 3 — Pending
+## Phase 3 — Enrichment Pipeline (DONE)
 
-Per `docs/PRD.md`, Phase 3 covers:
+Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference compounding, validation layer, confidence scoring, two-way vault sync, and cron-ready CLI commands.
 
-- Forge pipeline port (L0→L3 from v1)
-- Dream port (preference compounding)
-- Validation layer (HyperTune + HaluGard)
-- Confidence scoring with source_weight
-- Two-way sync vault ↔ SQLite
-- Cron jobs (bridge 6h, dream 1h)
+### Deliverables
 
-Not started yet. v1 source code exists in `forge/` and `mind/` and awaits porting to the v2 architecture.
+- `src/intelligence/llm.ts` — OpenAI-compatible LLM runner with graceful degradation stub.
+- `src/intelligence/forge.ts` — `ForgePipeline` class implementing L1 extraction, L2 scene synthesis, L3 persona generation.
+- `src/intelligence/dream.ts` — `DreamPipeline` class: inbox scan, preference matching, confidence updates, tier promotion/retirement, `active.md` generation.
+- `src/intelligence/confidence.ts` — `source_weight`, decay, confidence delta, clamping.
+- `src/intelligence/validate.ts` — HyperTune (coherence/relevance/quality) + HaluGard G2-G4 (claim verify, contradiction, drift) validation layer.
+- `src/intelligence/similarity.ts` — shared cosine similarity helper.
+- `src/intelligence/sync.ts` — `VaultSync` two-way sync between vault markdown and SQLite.
+- `src/intelligence/index.ts` — public exports.
+- `src/types.ts` — added `Insight`, `Preference`, `PreferenceEvidence`, `Persona`, `ValidationResult`, `SourceType`.
+- `src/storage/db.ts` — migration 002: `enrichment_state` table + `source_type`/`source_weight` columns on `preference_evidence`.
+- `src/storage/memory.ts` — enrichment helpers: unprocessed memory queue, insight/preference/evidence/persona CRUD.
+- `src/cli/index.ts` — added `bridge`, `dream`, `sync` commands.
+- `src/mcp/tools.ts` / `tool-defs.ts` — added `capricorn.bridge`, `capricorn.dream`, `capricorn.sync` tools.
+- Tests: `src/intelligence/confidence.test.ts`, `src/intelligence/sync.test.ts`, `src/intelligence/forge.test.ts`, `src/intelligence/dream.test.ts`, `src/intelligence/validate.test.ts`.
+
+### Verification
+
+- `bun run typecheck` — pass.
+- `bun run test` — 94 pass, 0 fail.
+- Manual CLI smoke test: `init` → `remember` → `bridge` → `dream` → `sync` passed.
+
+### Notes
+
+- Forge enrichment is disabled when `CAPRICORN_LLM_BASE_URL` is unset and `intelligence.forge.llm_provider` is `"none"`; the pipeline marks unprocessed memories as skipped without crashing.
+- Validation layer currently uses heuristic similarity when real embeddings are unavailable; the interface accepts an optional `embed` function for future 384d local embedder integration. HaluGard G2 claim-verify is a placeholder (length heuristic) pending SQLite evidence search.
+- Cron scheduler daemon is not implemented yet; `bridge`/`dream`/`sync` are cron-ready one-shot commands intended to be wired to an external scheduler in Phase 4.
 
 ---
 
-## Phase 4+ / Research — Prompt-ops Integration
+## Phase 4 — Distribution
 
 Prompt-ops (Meta's prompt optimization toolkit) is a research candidate for Phase 5. It would optimize prompts used by Capricorn, HaluGard, and HyperTune offline, against evaluation datasets built from session logs. Requires eval datasets before meaningful integration.
 

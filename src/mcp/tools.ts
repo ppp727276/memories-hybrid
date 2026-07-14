@@ -1,4 +1,5 @@
 import type { CapricornStorage } from "../storage/index.ts";
+import { loadConfig } from "../config.ts";
 
 export async function handleTool(
   req: { method: string; params?: Record<string, unknown> },
@@ -47,8 +48,23 @@ export async function handleTool(
 
   if (method === "capricorn.context") {
     const maxChars = Number(params.max_chars ?? 3000);
-    const context = `Capricorn context (${maxChars} chars max)\nNo confirmed preferences yet.`;
-    return { context, prefs_count: 0, persona_version: 0 };
+    const profile = String(params.profile ?? "default");
+    const confirmed = storage.memory.getAllPreferences().filter((p) => p.tier === "confirmed");
+    const persona = storage.memory.getLatestPersona(profile);
+    const lines: string[] = [];
+    lines.push(`# Capricorn Context`);
+    if (persona?.content) {
+      lines.push(`## Persona`);
+      lines.push(persona.content);
+      lines.push(``);
+    }
+    lines.push(`## Preferences (${confirmed.length} confirmed)`);
+    for (const pref of confirmed.slice(0, 20)) {
+      lines.push(`- ${pref.body} (confidence: ${pref.confidence.toFixed(2)})`);
+    }
+    let context = lines.join("\n").slice(0, maxChars);
+    if (context.length >= maxChars) context = context.slice(0, maxChars - 3) + "...";
+    return { context, prefs_count: confirmed.length, persona_version: persona?.version ?? 0 };
   }
 
   if (method === "capricorn.ingest") {
@@ -89,6 +105,31 @@ export async function handleTool(
     if (!content) throw new Error("content required");
     const { memory } = await storage.remember({ content, source: "agent", tags: ["brain_note"] });
     return { id: memory.id, status: "stored" };
+  }
+
+  if (method === "capricorn.bridge") {
+    const profile = String(params.profile ?? "default");
+    const batch_size = Number(params.batch_size ?? 10);
+    const { createLLMRunner, ForgePipeline } = await import("../intelligence/index.ts");
+    const llm = createLLMRunner(loadConfig());
+    const forge = new ForgePipeline(storage, llm);
+    const result = await forge.run(profile, batch_size);
+    return { status: "bridge_complete", result };
+  }
+
+  if (method === "capricorn.dream") {
+    const profile = String(params.profile ?? "default");
+    const { DreamPipeline } = await import("../intelligence/index.ts");
+    const dream = new DreamPipeline(storage);
+    const result = await dream.run(profile);
+    return { status: "dream_complete", result };
+  }
+
+  if (method === "capricorn.sync") {
+    const { VaultSync } = await import("../intelligence/index.ts");
+    const sync = new VaultSync(storage);
+    const result = sync.sync();
+    return { status: "sync_complete", result };
   }
 
   throw new Error(`unknown method: ${method}`);

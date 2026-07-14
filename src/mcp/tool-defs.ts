@@ -107,4 +107,33 @@ export const MCP_TOOLS: McpTool[] = [
       properties: { content: { type: "string" }, tags: { type: "array" } },
     },
   },
+  {
+    name: "capricorn.bridge",
+    description: "Run the Forge enrichment pipeline on unprocessed memories",
+    parameters: {
+      type: "object",
+      properties: {
+        profile: { type: "string", default: "default" },
+        batch_size: { type: "integer", default: 10 },
+      },
+    },
+  },
+  {
+    name: "capricorn.dream",
+    description: "Run the Dream preference compounding pass",
+    parameters: {
+      type: "object",
+      properties: {
+        profile: { type: "string", default: "default" },
+      },
+    },
+  },
+  {
+    name: "capricorn.sync",
+    description: "Synchronize vault markdown files with SQLite storage",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
 ];
