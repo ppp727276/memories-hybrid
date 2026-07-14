@@ -207,8 +207,6 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 
 ---
 
-## Phase 6 — Future
-
 ## Phase 6 — OSB Bridge Integration (DONE)
 
 Bring original `memories-hybrid` v1 capabilities into Capricorn v2:
@@ -224,8 +222,12 @@ Verification:
 - `bun run test` — 107 pass, 0 fail
 - `bun run smoke:osb` — OSB BRIDGE SMOKE PASS
 
+### Commits
+
+- `513b132` — `feat: Phase 6 OSB bridge integration (signal ingestion, checkpoint, persona merge)`
+
 ### Phase 7+ — Advanced local models, multi-vault, cloud sync, web dashboard
 
 ---
 
-> Final product = Phase 1–5. Phase 6+ is enhancement and v1 parity.
+> Final product = Phase 1–6. Phase 7+ is future enhancement.
