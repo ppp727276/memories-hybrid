@@ -12,6 +12,14 @@ class NoneEmbedder implements Embedder {
   dimensions(): number { return 0; }
 }
 
+class LocalEmbedder implements Embedder {
+  enabled(): boolean { return true; }
+  dimensions(): number { return 0; }
+  async embed(): Promise<number[]> {
+    throw new Error("local embedder not implemented");
+  }
+}
+
 class ApiEmbedder implements Embedder {
   private apiKey: string | undefined;
   private baseUrl: string;
@@ -48,5 +56,6 @@ class ApiEmbedder implements Embedder {
 export function createEmbedder(config: CapricornConfig): Embedder {
   if (config.storage.vector_provider === "none") return new NoneEmbedder();
   if (config.storage.vector_provider === "api") return new ApiEmbedder(config);
+  if (config.storage.vector_provider === "local") return new LocalEmbedder();
   return new NoneEmbedder();
 }

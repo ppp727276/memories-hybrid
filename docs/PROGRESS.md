@@ -13,17 +13,18 @@ Phase 1 delivers the Capricorn v2 storage engine: SQLite + FTS5 + vault sync.
 - `src/storage/db.ts` — SQLite init, migrations, schema versions, `memories_fts` (trigram), `memories` table.
 - `src/storage/memory.ts` — `MemoryStore` (remember, recall, search, forget, stats).
 - `src/storage/vault.ts` — `VaultWriter` writes signals to `Brain/inbox/sig-*.md`.
-- `src/storage/index.ts` — `CapricornStorage` orchestrates DB + vault.
+- `src/storage/index.ts` — `CapricornStorage` orchestrates DB + vault, computes real DB + vault sizes for stats.
 - `src/cli/index.ts` — CLI commands: `init`, `remember`, `recall`, `search`, `forget`, `stats`, `context`, `setup hermes`.
 - `src/mcp/server.ts` + `tool-defs.ts` + `tools.ts` — MCP stdio server with JSON-RPC 2.0 tools.
+- `src/mcp/tools.test.ts` — MCP round-trip test.
 - `src/index.ts` — package entrypoint.
 
 ### Key Fixes from Audit
 
 - Windows path resolution via `fileURLToPath`.
-- Real `stats()` (DB + vault sizes from filesystem).
+- Real `stats()` via `CapricornStorage` wrapper (DB + vault sizes from filesystem).
 - FTS5 `trigram` tokenizer for substring + CJK support.
-- Backup `~/.hermes/mcp.json` before overwrite.
+- Backup agent MCP config (hermes/claude/codex/cursor/windsurf) before overwrite.
 - Reject empty `content`.
 - `brain_feedback` enum validation.
 
@@ -49,7 +50,7 @@ Phase 2 adds vector search, hybrid FTS+vector recall, multi-agent MCP setup, and
 - `src/embeddings.ts` — `Embedder` interface + providers:
   - `api`: OpenAI-compatible embedding API
   - `none`: no-op embedder
-  - `local`: placeholder for local embedder
+  - `local`: stub embedder that throws "local embedder not implemented"
 - `src/storage/memory.ts` — added:
   - `recallByVector(embedding, topK, project)`
   - `recallHybrid(queryText, embedding, topK, project)` with RRF fusion
@@ -70,6 +71,10 @@ Phase 2 adds vector search, hybrid FTS+vector recall, multi-agent MCP setup, and
 - Smoke test (`init` → `remember` → `recall` → `stats`) passed.
 - `setup claude` and `setup windsurf` verified.
 
+### Notes
+
+- MCP server launch requires `bun` in PATH. Node fallback is planned for Phase 4 distribution.
+
 ### Commits
 
 - `655150e` — `feat: Phase 2 — vector search + multi-agent setup + RRF`
@@ -81,9 +86,11 @@ Phase 2 adds vector search, hybrid FTS+vector recall, multi-agent MCP setup, and
 
 Per `docs/PRD.md`, Phase 3 covers:
 
-- Forge L0→L3 intelligence pipeline
-- Dream compounding / preference generation cron
-- HyperTune + HaluGard validation layer integration
-- Multi-agent context protocol
+- Forge pipeline port (L0→L3 from v1)
+- Dream port (preference compounding)
+- Validation layer (HyperTune + HaluGard)
+- Confidence scoring with source_weight
+- Two-way sync vault ↔ SQLite
+- Cron jobs (bridge 6h, dream 1h)
 
-Not started yet.
+Not started yet. v1 source code exists in `forge/` and `mind/` and awaits porting to the v2 architecture.
