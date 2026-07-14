@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import type { Memory, MemoryInput, SearchResult, StatsResult } from "../types.ts";
-import { generateId } from "../utils/ulid.ts";
+import { generateId } from "../utils/id.ts";
+import { runSql, queryAll, queryGet } from "../utils/sqlite.ts";
 
 interface MemoryRow {
   id: string;
@@ -16,6 +17,7 @@ export class MemoryStore {
   constructor(private db: Database) {}
 
   remember(input: MemoryInput): Memory {
+    if (!input.content || input.content.trim().length === 0) throw new Error("content required");
     const now = Date.now();
     const id = generateId("mem");
     const memory: Memory = {
@@ -29,8 +31,8 @@ export class MemoryStore {
       created_at: now,
       updated_at: now,
     };
-    const db = this.db as unknown as { run(sql: string, ...params: unknown[]): { changes: number } };
-    db.run(
+    runSql(
+      this.db,
       `INSERT INTO memories (id, content, source, session_id, project, tags, metadata, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       memory.id,
@@ -48,8 +50,10 @@ export class MemoryStore {
 
   recall(queryText: string, topK = 5, project: string | null = null): SearchResult[] {
     const projectClause = project ? "AND m.project = ?" : "";
-    const params = project ? [`${escapeQuery(queryText)}*`, project, topK] : [`${escapeQuery(queryText)}*`, topK];
-    const rows = this.runSelect(
+    const match = `"${quoteFts5(queryText)}"*`;
+    const params = project ? [match, project, topK] : [match, topK];
+    const rows = queryAll<MemoryRow>(
+      this.db,
       `SELECT m.id, m.content, m.source, m.project, m.tags, rank as rank, m.created_at
        FROM memories_fts ft
        JOIN memories m ON m.rowid = ft.rowid
@@ -57,14 +61,16 @@ export class MemoryStore {
        ORDER BY rank
        LIMIT ?`,
       ...params,
-    ) as MemoryRow[];
+    );
     return rows.map((row) => rowToResult(row));
   }
 
   search(queryText: string, limit = 10, project: string | null = null): SearchResult[] {
     const projectClause = project ? "AND m.project = ?" : "";
-    const params = project ? [escapeQuery(queryText), project, limit] : [escapeQuery(queryText), limit];
-    const rows = this.runSelect(
+    const match = `"${quoteFts5(queryText)}"`;
+    const params = project ? [match, project, limit] : [match, limit];
+    const rows = queryAll<MemoryRow>(
+      this.db,
       `SELECT m.id, m.content, m.source, m.project, m.tags, rank as rank, m.created_at
        FROM memories_fts ft
        JOIN memories m ON m.rowid = ft.rowid
@@ -72,46 +78,36 @@ export class MemoryStore {
        ORDER BY rank
        LIMIT ?`,
       ...params,
-    ) as MemoryRow[];
+    );
     return rows.map((row) => rowToResult(row));
   }
 
   forget(id: string): boolean {
-    const db = this.db as unknown as { run(sql: string, ...params: unknown[]): { changes: number } };
-    const result = db.run("DELETE FROM memories WHERE id = ?", id);
+    const result = runSql(this.db, "DELETE FROM memories WHERE id = ?", id);
     return result.changes > 0;
   }
 
   stats(): StatsResult {
-    const total_memories = this.getScalar("SELECT COUNT(*) as c FROM memories");
-    const total_insights = this.getScalar("SELECT COUNT(*) as c FROM insights");
-    const preferences_count = this.getScalar("SELECT COUNT(*) as c FROM preferences");
+    const total_memories = queryGet<{ c: number }>(this.db, "SELECT COUNT(*) as c FROM memories")?.c ?? 0;
+    const total_insights = queryGet<{ c: number }>(this.db, "SELECT COUNT(*) as c FROM insights")?.c ?? 0;
+    const preferences_count = queryGet<{ c: number }>(this.db, "SELECT COUNT(*) as c FROM preferences")?.c ?? 0;
     return {
-      total_memories: total_memories.c,
-      total_insights: total_insights.c,
-      preferences_count: preferences_count.c,
+      total_memories,
+      total_insights,
+      preferences_count,
       db_size: 0,
       vault_size: 0,
     };
   }
 
   getById(id: string): Memory | null {
-    const rows = this.runSelect("SELECT * FROM memories WHERE id = ?", id) as Array<
-      Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }
-    >;
-    const row = rows[0];
+    const row = queryGet<Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }>(
+      this.db,
+      "SELECT * FROM memories WHERE id = ?",
+      id,
+    );
     if (!row) return null;
     return { ...row, tags: parseTags(row.tags), metadata: JSON.parse(row.metadata) } as Memory;
-  }
-
-  private runSelect(sql: string, ...params: unknown[]): unknown[] {
-    const stmt = (this.db as unknown as { query(sql: string): { all(...args: unknown[]): unknown[] } }).query(sql);
-    return stmt.all(...params);
-  }
-
-  private getScalar(sql: string): { c: number } {
-    const stmt = (this.db as unknown as { query(sql: string): { get(...args: unknown[]): unknown } }).query(sql);
-    return stmt.get() as { c: number };
   }
 }
 
@@ -127,7 +123,7 @@ function rowToResult(row: MemoryRow): SearchResult {
   };
 }
 
-function escapeQuery(q: string): string {
+function quoteFts5(q: string): string {
   return q.replace(/"/g, '""').trim();
 }
 

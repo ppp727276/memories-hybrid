@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { CapricornConfig } from "./types.ts";
 
@@ -74,10 +74,4 @@ export function saveConfig(config: CapricornConfig): void {
 export function expandPath(input: string): string {
   if (input.startsWith("~/")) return join(homedir(), input.slice(2));
   return resolve(input);
-}
-
-function dirname(p: string): string {
-  const parts = p.split(/[\\/]/);
-  parts.pop();
-  return parts.join("/") || ".";
 }

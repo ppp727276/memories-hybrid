@@ -1,7 +1,7 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readdirSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Memory } from "../types.ts";
-import { slugify } from "../utils/ulid.ts";
+import { slugify } from "../utils/id.ts";
 
 export class VaultWriter {
   constructor(private vaultPath: string) {}
@@ -29,5 +29,27 @@ export class VaultWriter {
     ].join("\n");
     writeFileSync(path, frontmatter);
     return path;
+  }
+
+  deleteSignal(id: string): boolean {
+    const dir = join(this.vaultPath, "Brain", "inbox");
+    try {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+        const path = join(dir, entry.name);
+        try {
+          const content = readFileSync(path, "utf8");
+          if (content.startsWith(`---\nid: ${id}\n`) || content.includes(`\nid: ${id}\n`)) {
+            rmSync(path);
+            return true;
+          }
+        } catch {
+          // ignore unreadable files
+        }
+      }
+    } catch {
+      // directory may not exist
+    }
+    return false;
   }
 }

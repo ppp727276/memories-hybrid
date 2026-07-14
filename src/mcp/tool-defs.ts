@@ -25,7 +25,7 @@ export const MCP_TOOLS: McpTool[] = [
   },
   {
     name: "capricorn.recall",
-    description: "Recall memories by meaning",
+    description: "Recall memories by keyword",
     parameters: {
       type: "object",
       required: ["query"],

@@ -69,8 +69,19 @@ export async function handleTool(
   }
 
   if (method === "capricorn.brain_feedback") {
-    // Phase 1: no-op, stored for future Dream pass
-    return { status: "recorded" };
+    const pref_id = String(params.pref_id ?? "");
+    const result = String(params.result ?? "");
+    if (!pref_id) throw new Error("pref_id required");
+    if (!["applied", "violated", "outdated"].includes(result)) {
+      throw new Error(`result must be one of: applied, violated, outdated (got ${result})`);
+    }
+    const { memory } = storage.remember({
+      content: `Feedback: preference ${pref_id} marked ${result}`,
+      source: "agent",
+      tags: ["brain_feedback", result],
+      metadata: { pref_id, result },
+    });
+    return { id: memory.id, status: "recorded" };
   }
 
   if (method === "capricorn.brain_note") {

@@ -1,9 +1,19 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { runSql, queryAll, queryGet } from "../utils/sqlite.ts";
 
-const MIGRATIONS = [
-  `-- core memory table
+interface Migration {
+  id: number;
+  name: string;
+  sql: string;
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    id: 1,
+    name: "core schema",
+    sql: `-- core memory table
 CREATE TABLE IF NOT EXISTS memories (
   id          TEXT PRIMARY KEY,
   content     TEXT NOT NULL,
@@ -14,24 +24,27 @@ CREATE TABLE IF NOT EXISTS memories (
   metadata    TEXT DEFAULT '{}',
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
-);`,
-  `-- FTS5 index
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
   content, tags,
-  content='memories', content_rowid='rowid'
-);`,
-  `-- FTS5 sync triggers
+  content='memories', content_rowid='rowid',
+  tokenize='trigram'
+);
+
 CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
   INSERT INTO memories_fts(rowid, content, tags) VALUES (new.rowid, new.content, new.tags);
 END;
+
 CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
   INSERT INTO memories_fts(memories_fts, rowid, content, tags) VALUES ('delete', old.rowid, old.content, old.tags);
 END;
+
 CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
   INSERT INTO memories_fts(memories_fts, rowid, content, tags) VALUES ('delete', old.rowid, old.content, old.tags);
   INSERT INTO memories_fts(rowid, content, tags) VALUES (new.rowid, new.content, new.tags);
-END;`,
-  `-- sessions
+END;
+
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
   agent       TEXT,
@@ -39,8 +52,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   started_at  INTEGER NOT NULL,
   ended_at    INTEGER,
   metadata    TEXT DEFAULT '{}'
-);`,
-  `-- insights placeholder
+);
+
 CREATE TABLE IF NOT EXISTS insights (
   id          TEXT PRIMARY KEY,
   memory_id   TEXT NOT NULL REFERENCES memories(id),
@@ -49,8 +62,8 @@ CREATE TABLE IF NOT EXISTS insights (
   metadata    TEXT DEFAULT '{}',
   created_at  INTEGER NOT NULL,
   UNIQUE(memory_id, layer)
-);`,
-  `-- preferences placeholder
+);
+
 CREATE TABLE IF NOT EXISTS preferences (
   id          TEXT PRIMARY KEY,
   body        TEXT NOT NULL,
@@ -60,8 +73,8 @@ CREATE TABLE IF NOT EXISTS preferences (
   origin      TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
-);`,
-  `-- preference evidence placeholder
+);
+
 CREATE TABLE IF NOT EXISTS preference_evidence (
   id          TEXT PRIMARY KEY,
   pref_id     TEXT NOT NULL REFERENCES preferences(id),
@@ -69,21 +82,22 @@ CREATE TABLE IF NOT EXISTS preference_evidence (
   result      TEXT NOT NULL,
   session_id  TEXT,
   created_at  INTEGER NOT NULL
-);`,
-  `-- personas placeholder
+);
+
 CREATE TABLE IF NOT EXISTS personas (
   id          TEXT PRIMARY KEY,
   profile     TEXT NOT NULL,
   content     TEXT NOT NULL,
   version     INTEGER NOT NULL DEFAULT 1,
   created_at  INTEGER NOT NULL
-);`,
-  `-- indexes
+);
+
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
 CREATE INDEX IF NOT EXISTS idx_memories_session ON memories(session_id);
 CREATE INDEX IF NOT EXISTS idx_insights_memory ON insights(memory_id);
 CREATE INDEX IF NOT EXISTS idx_preferences_confidence ON preferences(confidence);
 CREATE INDEX IF NOT EXISTS idx_pref_evidence_pref ON preference_evidence(pref_id);`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {
@@ -92,7 +106,21 @@ export function openDatabase(dbPath: string): Database {
 }
 
 export function migrate(db: Database): void {
-  for (const sql of MIGRATIONS) {
-    db.exec(sql);
+  runSql(
+    db,
+    `CREATE TABLE IF NOT EXISTS schema_migrations (
+      version    INTEGER PRIMARY KEY,
+      name       TEXT NOT NULL,
+      applied_at INTEGER NOT NULL
+    );`,
+  );
+
+  const appliedRows = queryAll<{ version: number }>(db, "SELECT version FROM schema_migrations ORDER BY version");
+  const applied = new Set(appliedRows.map((r) => r.version));
+
+  for (const migration of MIGRATIONS) {
+    if (applied.has(migration.id)) continue;
+    db.exec(migration.sql);
+    runSql(db, "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)", migration.id, migration.name, Date.now());
   }
 }

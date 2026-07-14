@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
-import { join } from "node:path";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
 import type { MemoryInput } from "../types.ts";
@@ -43,7 +44,7 @@ async function main(argv: string[]) {
   if (command === "init") {
     const config = loadConfig();
     mkdirSync(expandPath(config.vault.path), { recursive: true });
-    mkdirSync(expandPath(config.storage.db_path).split(/[\\/]/).slice(0, -1).join("/"), { recursive: true });
+    mkdirSync(dirname(expandPath(config.storage.db_path)), { recursive: true });
     saveConfig(config);
     const storage = makeStorage(config);
     storage.close();
@@ -113,7 +114,6 @@ async function main(argv: string[]) {
     const maxChars = Number(args["max-chars"] ?? 3000);
     const storage = makeStorage();
     const prefs: string[] = [];
-    // Phase 1: return empty context block (no preferences until Dream)
     const context = `Capricorn context (${prefs.length} prefs, ${maxChars} chars max)\nNo confirmed preferences yet.`;
     console.log(JSON.stringify({ context, prefs_count: 0, persona_version: 0 }, null, 2));
     storage.close();
@@ -126,7 +126,11 @@ async function main(argv: string[]) {
       const hermesDir = join(homedir(), ".hermes");
       mkdirSync(hermesDir, { recursive: true });
       const mcpPath = join(hermesDir, "mcp.json");
-      const entry = new URL("../mcp/server.ts", import.meta.url).pathname;
+      const entry = fileURLToPath(new URL("../mcp/server.ts", import.meta.url));
+      if (existsSync(mcpPath)) {
+        const backup = join(hermesDir, `mcp.json.bak.${Date.now()}`);
+        renameSync(mcpPath, backup);
+      }
       const config = {
         mcpServers: {
           capricorn: {
