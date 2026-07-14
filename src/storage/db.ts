@@ -96,7 +96,16 @@ CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
 CREATE INDEX IF NOT EXISTS idx_memories_session ON memories(session_id);
 CREATE INDEX IF NOT EXISTS idx_insights_memory ON insights(memory_id);
 CREATE INDEX IF NOT EXISTS idx_preferences_confidence ON preferences(confidence);
-CREATE INDEX IF NOT EXISTS idx_pref_evidence_pref ON preference_evidence(pref_id);`,
+CREATE INDEX IF NOT EXISTS idx_pref_evidence_pref ON preference_evidence(pref_id);
+
+-- vector storage (Phase 2)
+CREATE TABLE IF NOT EXISTS memories_vec (
+  memory_id TEXT PRIMARY KEY REFERENCES memories(id) ON DELETE CASCADE,
+  embedding BLOB NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_vec_id ON memories_vec(memory_id);`,
   },
 ];
 

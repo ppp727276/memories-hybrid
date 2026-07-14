@@ -9,7 +9,7 @@ export async function handleTool(
   if (method === "capricorn.remember") {
     const content = String(params.content ?? "");
     if (!content) throw new Error("content required");
-    const { memory, vaultPath } = storage.remember({
+    const { memory, vaultPath } = await storage.remember({
       content,
       source: params.source ? String(params.source) : "agent",
       project: params.project ? String(params.project) : undefined,
@@ -24,7 +24,7 @@ export async function handleTool(
     const query = String(params.query ?? "");
     const topK = Number(params.top_k ?? 5);
     const project = params.project ? String(params.project) : null;
-    return { results: storage.recall(query, topK, project) };
+    return { results: await storage.recall(query, topK, project) };
   }
 
   if (method === "capricorn.search") {
@@ -37,7 +37,7 @@ export async function handleTool(
   if (method === "capricorn.forget") {
     const id = String(params.id ?? "");
     if (!id) throw new Error("id required");
-    const ok = storage.forget(id);
+    const ok = await storage.forget(id);
     return { id, status: ok ? "deleted" : "not_found" };
   }
 
@@ -56,7 +56,7 @@ export async function handleTool(
     const ids: string[] = [];
     for (const m of memories) {
       if (m && typeof m === "object" && "content" in m) {
-        const { memory } = storage.remember({
+        const { memory } = await storage.remember({
           content: String(m.content),
           source: "agent",
           tags: Array.isArray(m.tags) ? m.tags.map(String) : undefined,
@@ -75,7 +75,7 @@ export async function handleTool(
     if (!["applied", "violated", "outdated"].includes(result)) {
       throw new Error(`result must be one of: applied, violated, outdated (got ${result})`);
     }
-    const { memory } = storage.remember({
+    const { memory } = await storage.remember({
       content: `Feedback: preference ${pref_id} marked ${result}`,
       source: "agent",
       tags: ["brain_feedback", result],
@@ -87,7 +87,7 @@ export async function handleTool(
   if (method === "capricorn.brain_note") {
     const content = String(params.content ?? "");
     if (!content) throw new Error("content required");
-    const { memory } = storage.remember({ content, source: "agent", tags: ["brain_note"] });
+    const { memory } = await storage.remember({ content, source: "agent", tags: ["brain_note"] });
     return { id: memory.id, status: "stored" };
   }
 

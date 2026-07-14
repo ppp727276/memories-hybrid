@@ -2,13 +2,13 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "node:fs";
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
 import type { MemoryInput } from "../types.ts";
 
 export function makeStorage(config = loadConfig()) {
-  return new CapricornStorage(config.storage.db_path, config.vault.path);
+  return new CapricornStorage(config.storage.db_path, config.vault.path, config);
 }
 
 function parseArgs(argv: string[]) {
@@ -64,7 +64,7 @@ async function main(argv: string[]) {
       tags: splitTags(args.tags as string),
       metadata: { importance: args.importance ? Number(args.importance) : undefined },
     };
-    const { memory, vaultPath } = storage.remember(input);
+    const { memory, vaultPath } = await storage.remember(input);
     console.log(JSON.stringify({ id: memory.id, status: "stored", vaultPath }, null, 2));
     storage.close();
     return;
@@ -75,7 +75,7 @@ async function main(argv: string[]) {
     const topK = Number(args["top-k"] ?? 5);
     const project = (args.project as string) ?? null;
     const storage = makeStorage();
-    const results = storage.recall(query, topK, project);
+    const results = await storage.recall(query, topK, project);
     console.log(JSON.stringify({ results }, null, 2));
     storage.close();
     return;
@@ -96,7 +96,7 @@ async function main(argv: string[]) {
     const id = positional[1];
     if (!id) throw new Error("id required");
     const storage = makeStorage();
-    const ok = storage.forget(id);
+    const ok = await storage.forget(id);
     console.log(JSON.stringify({ id, status: ok ? "deleted" : "not_found" }, null, 2));
     storage.close();
     return;
@@ -120,30 +120,49 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "ingest") {
+    const file = positional[1];
+    if (!file) throw new Error("file required");
+    const content = readFileSync(file, "utf8");
+    const lines = content.split(/\r?\n/).filter(Boolean);
+    const storage = makeStorage();
+    const ids: string[] = [];
+    for (const line of lines) {
+      const { memory } = await storage.remember({ content: line, source: "ingest" });
+      ids.push(memory.id);
+    }
+    console.log(JSON.stringify({ imported: ids.length, ids }, null, 2));
+    storage.close();
+    return;
+  }
+
   if (command === "setup") {
     const agent = positional[1];
-    if (agent === "hermes") {
-      const hermesDir = join(homedir(), ".hermes");
-      mkdirSync(hermesDir, { recursive: true });
-      const mcpPath = join(hermesDir, "mcp.json");
-      const entry = fileURLToPath(new URL("../mcp/server.ts", import.meta.url));
-      if (existsSync(mcpPath)) {
-        const backup = join(hermesDir, `mcp.json.bak.${Date.now()}`);
-        renameSync(mcpPath, backup);
-      }
-      const config = {
-        mcpServers: {
-          capricorn: {
-            command: "bun",
-            args: [entry],
-          },
-        },
-      };
-      writeFileSync(mcpPath, JSON.stringify(config, null, 2));
-      console.log(JSON.stringify({ status: "configured", agent: "hermes", path: mcpPath }, null, 2));
-      return;
+    const entry = fileURLToPath(new URL("../mcp/server.ts", import.meta.url));
+    const agents: Record<string, { path: string; transform?: (cfg: object) => object }> = {
+      hermes: { path: join(homedir(), ".hermes", "mcp.json") },
+      claude: { path: join(homedir(), ".claude", "mcp.json") },
+      codex: { path: join(homedir(), ".codex", "mcp.json") },
+      cursor: { path: join(homedir(), ".cursor", "mcp.json") },
+      windsurf: { path: join(homedir(), ".windsurf", "mcp_config.json") },
+    };
+    if (!(agent in agents)) throw new Error(`unknown agent: ${agent}`);
+    const { path } = agents[agent];
+    mkdirSync(dirname(path), { recursive: true });
+    if (existsSync(path)) {
+      renameSync(path, `${path}.bak.${Date.now()}`);
     }
-    throw new Error(`unknown agent: ${agent}`);
+    const config = {
+      mcpServers: {
+        capricorn: {
+          command: "bun",
+          args: [entry],
+        },
+      },
+    };
+    writeFileSync(path, JSON.stringify(config, null, 2));
+    console.log(JSON.stringify({ status: "configured", agent, path }, null, 2));
+    return;
   }
 
   console.log(`Usage: capricorn <command> [options]
@@ -155,7 +174,8 @@ Commands:
   forget <id>
   stats
   context [--max-chars n]
-  setup hermes`);
+  ingest <file>
+  setup <hermes|claude|codex|cursor|windsurf>`);
 }
 
 if (import.meta.main) {
