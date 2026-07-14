@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status: Final Product.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅. See [PROGRESS.md](PROGRESS.md).
+> **Status: Final Product.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6 ✅. See [PROGRESS.md](PROGRESS.md).
 
 ---
 
@@ -30,6 +30,7 @@ capricorn setup hermes
 | `capricorn remember "..."` | Store a memory |
 | `capricorn recall <query>` | Search memories |
 | `capricorn bridge` | Run Forge enrichment |
+| `capricorn bridge-osb` | Ingest OSB signals + enrich + merge persona |
 | `capricorn dream` | Run Dream preference compounding |
 | `capricorn sync` | Two-way vault ↔ SQLite sync |
 | `capricorn cron` | Start background scheduler |

@@ -170,6 +170,21 @@ CREATE TABLE IF NOT EXISTS eval_cases (
 
 CREATE INDEX IF NOT EXISTS idx_eval_cases_task ON eval_cases(task);`,
   },
+  {
+    id: 4,
+    name: "phase 6 osb bridge",
+    sql: `-- OSB bridge checkpoint / idempotency (Phase 6)
+CREATE TABLE IF NOT EXISTS osb_signal_checkpoints (
+  id           TEXT PRIMARY KEY,
+  file_path    TEXT NOT NULL,
+  md5          TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'processed',
+  processed_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_osb_signal_checkpoints_path ON osb_signal_checkpoints(file_path);
+CREATE INDEX IF NOT EXISTS idx_osb_signal_checkpoints_status ON osb_signal_checkpoints(status);`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {

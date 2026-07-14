@@ -1,5 +1,6 @@
 import type { CapricornStorage } from "../storage/index.ts";
 import { loadConfig } from "../config.ts";
+import { createLLMRunner } from "../intelligence/index.ts";
 
 export async function handleTool(
   req: { method: string; params?: Record<string, unknown> },
@@ -183,6 +184,21 @@ export async function handleTool(
       return { status: "duel_recorded", winner, loser };
     }
     throw new Error(`unknown prompt_ops subcommand: ${sub}`);
+  }
+
+  if (method === "capricorn.bridgeOsb") {
+    const { OsbBridge } = await import("../bridge/osb.ts");
+    const config = loadConfig();
+    const dryRun = params.dry_run === true || params.dryRun === true;
+    const runner = async () => {
+      const llm = createLLMRunner(config);
+      const { ForgePipeline } = await import("../intelligence/forge.ts");
+      const forge = new ForgePipeline(storage, llm);
+      await forge.run("default", config.intelligence.forge.batch_size);
+    };
+    const bridge = new OsbBridge(storage, config.bridge!, runner);
+    const result = await bridge.run(dryRun);
+    return { status: "bridge_osb_complete", result };
   }
 
   throw new Error(`unknown method: ${method}`);

@@ -171,12 +171,12 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 Capricorn v2 final product is a standalone engine. Phase 6 brings parity with the original `memories-hybrid` v1 by adding an OSB signal bridge on top of the existing engine.
 
-- [ ] Ingest signals from `Brain/inbox/*.md` with frontmatter YAML parsing
-- [ ] MD5-based checkpoint/idempotency per signal
-- [ ] `capricorn bridge-osb` one-shot command for Hermes cron
-- [ ] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
-- [ ] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
-- [ ] Smoke test: signal → enrichment → persona written
+- [x] Ingest signals from `Brain/inbox/*.md` with frontmatter YAML parsing
+- [x] MD5-based checkpoint/idempotency per signal
+- [x] `capricorn bridge-osb` one-shot command for Hermes cron
+- [x] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
+- [x] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
+- [x] Smoke test: signal → enrichment → persona written
 
 ### Phase 7 — Advanced Local Models
 

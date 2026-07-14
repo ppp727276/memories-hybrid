@@ -33,6 +33,12 @@ export const DEFAULT_CONFIG: CapricornConfig = {
   },
   mcp: { enabled: true, transport: "stdio" },
   http: { enabled: false, port: 7437, host: "127.0.0.1" },
+  bridge: {
+    osb_vault_path: join(homedir(), "Documents", "second-brain-memory"),
+    osb_inbox_glob: "Brain/inbox/**/*.md",
+    osb_persona_target: join(homedir(), "Documents", "second-brain-memory", "Brain", "personas", "persona-core.md"),
+    osb_profile: "default",
+  },
 };
 
 export function configPath(): string {
@@ -61,6 +67,7 @@ export function mergeConfig(overrides: Partial<CapricornConfig>): CapricornConfi
     },
     mcp: { ...DEFAULT_CONFIG.mcp, ...overrides.mcp },
     http: { ...DEFAULT_CONFIG.http, ...overrides.http },
+    bridge: overrides.bridge ? { ...DEFAULT_CONFIG.bridge, ...overrides.bridge } : DEFAULT_CONFIG.bridge,
   };
 }
 

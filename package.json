@@ -21,7 +21,8 @@
     "test": "bun test",
     "prepublishOnly": "bun run build && bun run test && bun run typecheck",
     "smoke:phase3": "bun run scripts/smoke-phase3.ts",
-    "smoke:phase4": "bun run scripts/smoke-phase4.ts"
+    "smoke:phase4": "bun run scripts/smoke-phase4.ts",
+    "smoke:osb": "bun run scripts/smoke-osb-bridge.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
@@ -37,5 +38,9 @@
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "glob": "^13.0.6",
+    "yaml": "^2.9.0"
   }
 }

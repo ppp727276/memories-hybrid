@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine for AI agents.
 
-> **Status: Final Product.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅. See [PRD](docs/PRD.md) for details.
+> **Status: Final Product.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6 ✅. See [PRD](docs/PRD.md) for details.
 
 ---
 
@@ -36,6 +36,7 @@ AI agents forget. Existing memory tools (Uteke, Engram, Mnemosyne) remember raw 
 | **Anti-hallucination** | ✅ readable vault | ❌ | ❌ | ❌ |
 | **Validation layer** | ✅ 0 token | ❌ | ❌ | ❌ |
 | **Prompt Optimization** | ✅ dueling bandits | ❌ | ❌ | ❌ |
+| **OSB Bridge** | ✅ signal ingestion | ❌ | ❌ | ❌ |
 
 ---
 

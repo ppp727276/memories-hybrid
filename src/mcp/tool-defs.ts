@@ -175,4 +175,15 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
   },
-];
+  {
+    name: "capricorn.bridgeOsb",
+    description: "Run OSB bridge: ingest signals, enrich, and merge persona",
+    parameters: {
+      type: "object",
+      required: [],
+      properties: {
+        dry_run: { type: "boolean", description: "Run without writing files" },
+      },
+    },
+  },
+]

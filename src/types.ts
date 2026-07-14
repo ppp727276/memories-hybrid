@@ -66,6 +66,12 @@ export interface CapricornConfig {
     port: number;
     host: string;
   };
+  bridge?: {
+    osb_vault_path: string;
+    osb_inbox_glob: string;
+    osb_persona_target: string;
+    osb_profile: string;
+  };
 }
 
 export interface StatsResult {

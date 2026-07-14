@@ -209,15 +209,20 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 
 ## Phase 6 — Future
 
-### Phase 6 — OSB Bridge Integration (Backport v1)
+## Phase 6 — OSB Bridge Integration (DONE)
 
 Bring original `memories-hybrid` v1 capabilities into Capricorn v2:
 
-- Ingest signals from `Brain/inbox/*.md`
-- MD5 checkpoint / idempotency
-- `capricorn bridge-osb` one-shot command for cron
-- Persona merge with frozen block preservation
-- Config-driven via `bridge-config.json`
+- `src/bridge/osb.ts` — ingestion, checkpoint, persona merge
+- `src/bridge/osb.test.ts` — unit test
+- `capricorn bridge-osb [--dry-run]` CLI
+- MCP tool `capricorn.bridgeOsb`
+- Smoke test `bun run smoke:osb`
+
+Verification:
+
+- `bun run test` — 107 pass, 0 fail
+- `bun run smoke:osb` — OSB BRIDGE SMOKE PASS
 
 ### Phase 7+ — Advanced local models, multi-vault, cloud sync, web dashboard
 

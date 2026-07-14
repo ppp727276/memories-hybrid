@@ -7,6 +7,7 @@ import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
 import type { MemoryInput } from "../types.ts";
 import { createLLMRunner, ForgePipeline, DreamPipeline, VaultSync } from "../intelligence/index.ts";
+import { OsbBridge } from "../bridge/osb.ts";
 import { CapricornScheduler } from "../scheduler.ts";
 
 export function makeStorage(config = loadConfig()) {
@@ -327,6 +328,23 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "bridge-osb") {
+    const config = loadConfig();
+    const storage = makeStorage(config);
+    const dryRun = args["dry-run"] === true;
+    const runner = async () => {
+      const llm = createLLMRunner(config);
+      const { ForgePipeline } = await import("../intelligence/forge.ts");
+      const forge = new ForgePipeline(storage, llm);
+      await forge.run("default", config.intelligence.forge.batch_size);
+    };
+    const bridge = new OsbBridge(storage, config.bridge ?? DEFAULT_CONFIG.bridge!, runner);
+    const result = await bridge.run(dryRun);
+    console.log(JSON.stringify({ status: "bridge_osb_complete", result }, null, 2));
+    storage.close();
+    return;
+  }
+
   console.log(`Usage: capricorn <command> [options]
 Commands:
   init
@@ -339,6 +357,7 @@ Commands:
   ingest <file>
   setup <hermes|claude|codex|cursor|windsurf>
   bridge [--profile p] [--batch-size n]
+  bridge-osb [--dry-run]
   dream [--profile <name>]
   sync
   cron
