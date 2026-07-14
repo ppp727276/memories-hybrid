@@ -1,64 +1,73 @@
-# Architecture
+# Capricorn v2 — Architecture
 
-## Overview
+**"Mereka ingat, aku paham."**
 
-Memories Hybrid is a dual-layer memory system:
+Storage Engine + Intelligence Engine. Dua layer, satu sistem.
 
-### Layer 1: Capture (Deterministic)
-`memory()` tool calls → MEMORY.md + JSONL log → vault inbox
+---
 
-### Layer 2: Enrichment (LLM)
-Bridge reads signals → Forge pipeline (L0→L1→L2→L3) → persona.md
+## Modular Docs
 
-### Layer 3: Compounding (Deterministic)
-Dream reads inbox → preferences → active.md → context injection
+Arsitektur dipecah menjadi 4 file untuk navigasi dan maintenance:
 
-## Pipeline Detail
+| File | Isi | Sections |
+|---|---|---|
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Index — overview + philosophy | 1-2 |
+| **[architecture-storage.md](architecture-storage.md)** | Data model + storage engine | 3-4 |
+| **[architecture-intelligence.md](architecture-intelligence.md)** | Intelligence engine + validation | 5 |
+| **[architecture-reference.md](architecture-reference.md)** | Interfaces, flows, migration, comparison, glossary | 6-15 |
 
-### Forge Engine (L0→L1→L2→L3)
+---
 
-| Layer | Model | Function |
-|-------|-------|----------|
-| L0 | text-embedding-v3 | Conversation → vector |
-| L1 | deepseek-v4-pro | Extract insights |
-| L2 | deepseek-v4-pro | Synthesize scenes |
-| L3 | deepseek-v4-pro | Generate persona |
-
-### Dream Pass
-
-1. Scan inbox/*.md signals
-2. Match existing preferences → update confidence
-3. Promote new signals → confirm/trial
-4. Regenerate active.md
-
-## Vault Structure
+## High-Level Architecture
 
 ```
-second-brain-memory/
-├── Brain/active.md              ← injected into context
-├── Brain/inbox/                 ← raw signals
-├── Brain/preferences/           ← confirmed preferences
-├── Brain/personas/              ← bridge enrichment output
-├── Brain/log/                   ← event log (bridge reads this)
-└── Brain/.snapshots/            ← dream rollback points
+Agent ──MCP──→ Capricorn
+                ├── Storage Engine (sync)
+                │   └── SQLite + FTS5 + Vector + Vault (markdown)
+                ├── Intelligence Engine (async)
+                │   ├── Forge L0→L3 (enrichment, 6h cron)
+                │   └── Dream (compounding, 1h cron)
+                ├── Validation Layer (0 token)
+                │   ├── HyperTune scoring (quality)
+                │   └── HaluGard G2-G4 (consistency)
+                └── Output
+                    └── capricorn.context (1 block, ~3000 chars)
 ```
 
-## Data Flow
+---
+
+## Philosophy: "Mereka Ingat, Aku Paham"
 
 ```
-Session → memory() → MEMORY.md (516 chars)
-                  → JSONL log
-                     ↓
-Bridge (6h) → Forge → persona.md
-                     ↓
-Dream (1h) → preferences → active.md (4496 chars)
-                     ↓
-Next session: MEMORY.md + active.md → context
+MEREKA (Uteke / Engram / Mnemosyne):
+  Input:  "User prefers dark mode, also says light mode hurts eyes"
+  Output: "User prefers dark mode"                    ← INGAT. Mentah.
+
+CAPRICORN:
+  Input:  Same
+  L0:     → vector: 1024d
+  L1:     → insight: "user values visual comfort, dark mode preferred"
+  L2:     → scene: "user migrated all tools to dark themes over 2 weeks"
+  L3:     → persona: "aesthetic-conscious, prefers low eye strain"
+  Dream:  → confidence 0.87 after 3 confirmations
+  Output: "User is aesthetic-conscious developer who strongly prefers
+           dark interfaces (confidence 0.87, 3 confirmations)"
+                                              ← PAHAM. Diproses.
 ```
 
-## Conflict Resolution
+**Dua dimensi yang ga dimiliki kompetitor:**
+1. **Depth** — ga cuma recall, tapi ekstrak insight, synthesize scene, generate persona
+2. **Compounding** — preferences accumulate evidence across sessions, confidence grows
 
-When MEMORY.md and active.md contradict:
-- active.md (confirmed preferences) wins
-- MEMORY.md is raw capture, active.md is processed knowledge
+---
 
+## Key Design Decisions
+
+1. **SQLite as primary, vault as source of truth.** SQLite for fast queries, vault for human audit + anti-hallucination. Write-through ensures consistency.
+2. **MCP-first, CLI-second.** Agent integration via MCP is the primary interface. CLI is for humans and cron.
+3. **Async enrichment, sync recall.** Intelligence engine runs async (cron). Storage engine responds sync. Agent never waits for enrichment.
+4. **Graceful degradation.** If no local embedding model or API key, FTS5-only recall. If no LLM API, enrichment disabled. System never crashes on missing deps.
+5. **Vault is markdown.** Always readable. Always editable. No black box. This is the anti-hallucination guarantee.
+6. **Compounding is the moat.** No competitor has evidence-based preference confidence. This is the "paham" layer.
+7. **Profile-shared by default.** Profile isolation via `--profile` flag. Corrections scoped per-profile.
