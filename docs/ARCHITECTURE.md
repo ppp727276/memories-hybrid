@@ -15,7 +15,7 @@ Arsitektur dipecah menjadi 4 file untuk navigasi dan maintenance:
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Index — overview + philosophy | 1-2 |
 | **[architecture-storage.md](architecture-storage.md)** | Data model + storage engine | 3-4 |
 | **[architecture-intelligence.md](architecture-intelligence.md)** | Intelligence engine + validation | 5 |
-| **[architecture-reference.md](architecture-reference.md)** | Interfaces, flows, migration, comparison, glossary | 6-15 |
+| **[architecture-reference.md](architecture-reference.md)** | Interfaces, flows, migration, comparison, glossary, prompt-ops | 6-15 |
 
 ---
 

@@ -12,16 +12,21 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 **Capricorn solves this:** dual-engine architecture that stores AND understands.
 
+> **Status: pre-alpha.** Phase 1 & Phase 2 implemented. Phase 3 pending.
+>
+> See [PROGRESS.md](PROGRESS.md) for implementation status.
+
 ---
 
 ## Current Status
 
 | Phase | Status | Target |
 |---|---|---|
-| **Phase 1** | ⏳ Starting | 2-3 weeks — FTS5-only core |
-| **Phase 2** | ⏸️ Blocked on P1 | Vector search + multi-agent setup |
-| **Phase 3** | ⏸️ Blocked on P2 | Enrichment pipeline port |
+| **Phase 1** | ✅ Done | FTS5-only core |
+| **Phase 2** | ✅ Done | Vector search + multi-agent setup |
+| **Phase 3** | ⏳ Pending | Enrichment pipeline port |
 | **Phase 4** | ⏸️ Blocked on P3 | Distribution + benchmarks |
+| **Phase 5** | ⏸️ Future | Prompt-ops integration (research) |
 
 ---
 
@@ -69,6 +74,12 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [ ] Temporal KG
 - [ ] `capricorn explain <id>`
 - [ ] `capricorn enrich` — on-demand enrichment
+
+### P4 — Research (Phase 5) — Prompt optimization
+
+- [ ] Prompt-ops integration for Capricorn context + HaluGard gates + HyperTune scorer
+- [ ] Build eval datasets from session logs and labeled outputs
+- [ ] Offline prompt optimization pipeline
 
 ---
 
@@ -154,5 +165,4 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 ## References
 
 - [Architecture](ARCHITECTURE.md) — Full system design
-- [Architecture (HTML)](ARCHITECTURE.html) — Visual overview
 - [Glossary](architecture-reference.md#14-glossary) — Term definitions

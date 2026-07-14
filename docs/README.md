@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status: pre-alpha.** Phase 1 implementation starting.
+> **Status:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 pending. See [PROGRESS.md](PROGRESS.md).
 
 ---
 
@@ -42,7 +42,8 @@ Agent ──MCP──→ Capricorn
 
 - [PRD](PRD.md) — Requirements, roadmap, status, testing strategy
 - [Architecture](ARCHITECTURE.md) — Full system design + glossary
-- [Architecture (HTML)](ARCHITECTURE.html) — Visual overview
+- [PROGRESS](PROGRESS.md) — Implementation status
+- [Prompt-ops Integration](prompt-ops-integration.md) — Phase 5 research candidate
 
 ---
 
@@ -66,6 +67,7 @@ Agent ──MCP──→ Capricorn
 - [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory)
 - [HyperTune](https://github.com/geeknik/HyperTune)
 - [HaluGard](https://github.com/ppp727276/halugard)
+- [prompt-ops](https://github.com/meta-llama/prompt-ops) — prompt optimization research candidate
 
 ---
 

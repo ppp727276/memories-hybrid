@@ -261,6 +261,34 @@ capricorn/
 
 ---
 
+## 15. Prompt Optimization (prompt-ops)
+
+`prompt-ops` (Meta's open-source prompt optimization toolkit) is a Phase 5 research candidate for optimizing prompts used by Capricorn, HaluGard, and HyperTune. It would run **offline** against evaluation datasets built from session logs and labeled outputs.
+
+### 15.1 Candidate optimization targets
+
+| Component | Prompt optimized | Eval metric |
+|---|---|---|
+| **Capricorn** | `capricorn.context` template | recall@k of relevant memories |
+| **HaluGard** | G1-G4 gate prompts | precision/recall of hallucination flags |
+| **HyperTune** | Quality scoring rubric | correlation with human ratings |
+
+### 15.2 Blockers before integration
+
+- Need evaluation datasets (50+ labeled examples per use case).
+- Prompt-ops is Python; Capricorn is TypeScript/Bun → subprocess or separate service.
+- Must avoid overfitting to HyperTune score at the cost of HaluGard correctness.
+
+### 15.3 Risks
+
+- Optimizing for the wrong metric.
+- Circular dependency: prompt changes → output changes → validation score changes.
+- Maintenance of eval datasets.
+
+See [prompt-ops-integration.md](prompt-ops-integration.md) for full details.
+
+---
+
 ## 14. Glossary
 
 | Term | Definition |
@@ -276,7 +304,8 @@ capricorn/
 | **HyperTune** | Quality scoring methodology (coherence, relevance, complexity). Adopted from geeknik/HyperTune. |
 | **HaluGard** | Anti-hallucination framework (ppp727276/halugard). G2 (claim verify), G3 (contradiction), G4 (drift detect). |
 | **dcg** | Destructive Command Guard (Dicklesworthstone/destructive_command_guard). Pattern packs + explain mode concept adopted. |
-| **Validation layer** | 0-token pipeline: HyperTune scoring + HaluGard G2-G4. Validates enrichment output before merge. |
-| **MCP** | Model Context Protocol — stdio JSON-RPC interface for AI agent tools. |
-| **Vault** | Markdown mirror of all memories. Human-readable, auditable, anti-hallucination guarantee. |
-| **Two-way sync** | Vault ↔ SQLite synchronization via mtime detection. Human edits propagate to database. |
+**Validation layer** | 0-token pipeline: HyperTune scoring + HaluGard G2-G4. Validates enrichment output before merge. |
+**MCP** | Model Context Protocol — stdio JSON-RPC interface for AI agent tools. |
+**Vault** | Markdown mirror of all memories. Human-readable, auditable, anti-hallucination guarantee. |
+**Two-way sync** | Vault ↔ SQLite synchronization via mtime detection. Human edits propagate to database. |
+**Prompt-ops** | Meta's open-source prompt optimization toolkit. Candidate for Phase 5 to optimize Capricorn/HaluGard/HyperTune prompts. |

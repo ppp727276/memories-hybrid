@@ -159,6 +159,7 @@ Bridge cron (6h):
 - **HyperTune** (geeknik/HyperTune, 120⭐): coherence/relevance/quality scoring
 - **HaluGard** (ppp727276/halugard): G2 claim verify, G3 contradiction, G4 drift detect
 - **dcg** (destructive_command_guard, 3.8k⭐): pattern packs + explain mode
+- **prompt-ops** (meta-llama/prompt-ops): prompt optimization candidate for Phase 5
 
 **Dream vs Validation layer:**
 

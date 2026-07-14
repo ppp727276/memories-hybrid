@@ -94,3 +94,11 @@ Per `docs/PRD.md`, Phase 3 covers:
 - Cron jobs (bridge 6h, dream 1h)
 
 Not started yet. v1 source code exists in `forge/` and `mind/` and awaits porting to the v2 architecture.
+
+---
+
+## Phase 4+ / Research — Prompt-ops Integration
+
+Prompt-ops (Meta's prompt optimization toolkit) is a research candidate for Phase 5. It would optimize prompts used by Capricorn, HaluGard, and HyperTune offline, against evaluation datasets built from session logs. Requires eval datasets before meaningful integration.
+
+See `docs/prompt-ops-integration.md` for full details.
