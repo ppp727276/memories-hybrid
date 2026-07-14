@@ -2,7 +2,9 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status: pre-alpha.** Architecture finalized. Phase 1 implementation starting. No working code yet.
+> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending.
+>
+> See [PROGRESS.md](PROGRESS.md) for implementation status.
 
 ---
 
@@ -34,27 +36,27 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 ### P0 — Must Have (Phase 1) — FTS5-only core
 
-- [ ] `capricorn init` — initialize vault + database
-- [ ] `capricorn remember` — store memories (SQLite + FTS5 + vault write-through)
-- [ ] `capricorn recall` — keyword search via FTS5
-- [ ] `capricorn forget` — delete memories
-- [ ] `capricorn stats` — memory statistics
-- [ ] `capricorn context` — distilled context for agent injection
-- [ ] `capricorn setup hermes` — auto-configure MCP
-- [ ] MCP server (stdio, JSON-RPC 2.0)
-- [ ] SQLite schema + migrations
-- [ ] Vault write-through (markdown mirror)
-- [ ] Schema migration tests + MCP round-trip tests
+- [x] `capricorn init` — initialize vault + database
+- [x] `capricorn remember` — store memories (SQLite + FTS5 + vault write-through)
+- [x] `capricorn recall` — keyword search via FTS5
+- [x] `capricorn forget` — delete memories
+- [x] `capricorn stats` — memory statistics
+- [x] `capricorn context` — distilled context for agent injection
+- [x] `capricorn setup hermes` — auto-configure MCP
+- [x] MCP server (stdio, JSON-RPC 2.0)
+- [x] SQLite schema + migrations
+- [x] Vault write-through (markdown mirror)
+- [x] Schema migration tests + MCP round-trip tests
 
 ### P1 — Should Have (Phase 2) — Vector search
 
-- [ ] Vector search (API default: text-embedding-v3, 1024d)
-- [ ] RRF fusion (hybrid: FTS5 + vector)
-- [ ] `capricorn setup claude|codex|cursor|windsurf`
-- [ ] Offline mode (FTS5 fallback when no vector)
-- [ ] `capricorn search` — full-text search
-- [ ] `capricorn ingest` — bulk import
-- [ ] Local ONNX optional (EmbeddingGemma Q4, 768d)
+- [x] Vector search (API default: text-embedding-v3, 1024d)
+- [x] RRF fusion (hybrid: FTS5 + vector)
+- [x] `capricorn setup claude|codex|cursor|windsurf`
+- [x] Offline mode (FTS5 fallback when no vector)
+- [x] `capricorn search` — full-text search
+- [x] `capricorn ingest` — bulk import
+- [ ] Local ONNX optional (EmbeddingGemma Q4, 768d) — Phase 4
 
 ### P2 — Nice to Have (Phase 3) — Enrichment
 

@@ -115,6 +115,21 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 - Validation layer currently uses heuristic similarity when real embeddings are unavailable; the interface accepts an optional `embed` function for future 384d local embedder integration. HaluGard G2 claim-verify is a placeholder (length heuristic) pending SQLite evidence search.
 - Cron scheduler daemon is not implemented yet; `bridge`/`dream`/`sync` are cron-ready one-shot commands intended to be wired to an external scheduler in Phase 4.
 
+### Post-Review Fixes
+
+- Restored `docs/audit-prompt.md` (accidentally emptied).
+- Corrected PRD status text from "Phase 3 pending" to "Phase 1 through Phase 3 implemented".
+- Fixed `capricorn.context` to read confirmed preferences and latest persona from DB instead of returning a stub.
+- Removed duplicate `sourceWeight`; storage layer now imports from `src/intelligence/confidence.ts`.
+- Wired optional `embed` function into validation coherence/relevance checks.
+- Fixed `VaultSync` to preserve original vault signal IDs via `MemoryStore.importMemory`.
+- Fixed `DreamPipeline` single-pass confidence computation; trials now seed initial evidence.
+- Fixed `DreamPipeline` frontmatter parser so body content is no longer swallowed after the second `---`.
+
+### Commits
+
+- `aa72649` — `feat: Phase 3 enrichment pipeline + review fixes`
+
 ---
 
 ## Phase 4 — Distribution
