@@ -127,15 +127,33 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 - Fixed `VaultSync` to preserve original vault signal IDs via `MemoryStore.importMemory`.
 - Fixed `DreamPipeline` single-pass confidence computation; trials now seed initial evidence.
 - Fixed `DreamPipeline` frontmatter parser so body content is no longer swallowed after the second `---`.
+- Added `stored.content` assertion to `src/intelligence/sync.test.ts`.
+- Updated `README.md` Phase status and corrected "L0→L3" to "L1→L3".
+- Fixed CLI `dream` help text and noted `context` outputs JSON.
+- Added `scripts/smoke-phase3.ts` and `bun run smoke:phase3` for automated Phase 3 smoke testing.
+- Documented Forge L3 validation as advisory-only.
+- Removed committed review files (`review-*.md`) and added them to `.gitignore`.
+- Fixed `src/intelligence/forge.ts` duplicate L3 insight write that caused SQLite UNIQUE constraint failure.
 
 ### Commits
 
 - `aa72649` — `feat: Phase 3 enrichment pipeline + review fixes`
+- `76f2e12` — `fix: close all remaining Phase 3 review findings`
 
 ---
 
-## Phase 4 — Distribution
+## Phase 4 — Distribution + Advanced Intelligence
 
-Prompt-ops (Meta's prompt optimization toolkit) is a research candidate for Phase 5. It would optimize prompts used by Capricorn, HaluGard, and HyperTune offline, against evaluation datasets built from session logs. Requires eval datasets before meaningful integration.
+Phase 4 is pending. Scope from PRD:
 
-See `docs/prompt-ops-integration.md` for full details.
+- `npm publish` — package Capricorn for npm distribution.
+- Binary distribution — compile to single executable via `bun build --compile`.
+- Benchmarks — integrate LongMemEval / BEAM-style eval harness.
+- Cron scheduler daemon — turn one-shot `bridge`/`dream`/`sync` commands into a background scheduler.
+- Local ONNX embedder (EmbeddingGemma Q4, 768d) — optional offline embedding fallback.
+- Semantic conflict detection — surface contradictions between preferences.
+- Temporal knowledge graph — model time-aware relationships between memories.
+- `capricorn explain <id>` — explain why a memory exists and how it was enriched.
+- `capricorn enrich` — on-demand enrichment command.
+
+See [PRD](PRD.md) for detailed requirements.
