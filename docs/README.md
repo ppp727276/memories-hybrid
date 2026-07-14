@@ -41,9 +41,10 @@ Agent ──MCP──→ Capricorn
 ## Docs Index
 
 - [PRD](PRD.md) — Requirements, roadmap, status, testing strategy
-- [Architecture](ARCHITECTURE.md) — Full system design + glossary
 - [PROGRESS](PROGRESS.md) — Implementation status
+- [Architecture](ARCHITECTURE.md) — Full system design + glossary
 - [Prompt-ops Integration](prompt-ops-integration.md) — Phase 5 research candidate
+- [Audit Prompt](audit-prompt.md) — Prompt for external agent QA review
 
 ---
 
