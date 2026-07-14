@@ -56,7 +56,8 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [x] Offline mode (FTS5 fallback when no vector)
 - [x] `capricorn search` — full-text search
 - [x] `capricorn ingest` — bulk import
-- [ ] Local ONNX optional (EmbeddingGemma Q4, 768d) — Phase 4
+- [x] Local embedder fallback (deterministic, no ONNX dep) — Phase 4
+- [ ] Real ONNX local model (EmbeddingGemma Q4, 768d) — Phase 5
 
 ### P2 — Nice to Have (Phase 3) — Enrichment
 
@@ -65,15 +66,15 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [x] Validation layer (HyperTune + HaluGard G2-G4)
 - [x] Confidence scoring with source_weight
 - [x] Two-way sync vault ↔ SQLite
-- [ ] Cron scheduler daemon (Phase 4) — commands are cron-ready
+- [x] Cron scheduler daemon (`capricorn cron`)
 
 ### P3 — Future (Phase 4) — Distribution
 
 - [x] `npm publish`
 - [x] Binary distribution (Bun compile)
-- [x] Benchmarks (LongMemEval, BEAM)
+- [x] Benchmark harness (self-recall + latency; LongMemEval/BEAM pending)
 - [x] Semantic conflict detection
-- [x] Temporal KG
+- [x] Temporal relations view
 - [x] `capricorn explain <id>`
 - [x] `capricorn enrich` — on-demand enrichment
 
@@ -91,7 +92,6 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - **Not** a command guard — use dcg for that
 - **Not** a real-time hallucination detector — use HaluGard standalone for that
 - **No** cloud sync (v2)
-- **No** single binary (yet — Bun compile later)
 - **No** vector search in P0 — FTS5 only to keep scope minimal
 
 ---

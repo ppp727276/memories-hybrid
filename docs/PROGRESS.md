@@ -73,7 +73,7 @@ Phase 2 adds vector search, hybrid FTS+vector recall, multi-agent MCP setup, and
 
 ### Notes
 
-- MCP server launch requires `bun` in PATH. Node fallback is planned for Phase 4 distribution.
+- MCP server launch requires `bun` in PATH. Node fallback remains a future distribution enhancement.
 
 ### Commits
 
@@ -114,7 +114,7 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 
 - Forge enrichment is disabled when `CAPRICORN_LLM_BASE_URL` is unset and `intelligence.forge.llm_provider` is `"none"`; the pipeline marks unprocessed memories as skipped without crashing.
 - Validation layer currently uses heuristic similarity when real embeddings are unavailable; the interface accepts an optional `embed` function for future 384d local embedder integration. HaluGard G2 claim-verify is a placeholder (length heuristic) pending SQLite evidence search.
-- Forge L3 persona/insight validation is advisory-only: validation flags are attached to insight metadata but never block storage. A hard gate is planned for Phase 4.
+- Forge L3 persona/insight validation is advisory-only: validation flags are attached to insight metadata but never block storage. A hard gate is a future enhancement, not Phase 4.
 - Cron scheduler daemon implemented in `src/scheduler.ts` via `capricorn cron`.
 
 ### Post-Review Fixes
@@ -172,8 +172,8 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 
 ### Commits
 
-- `76f2e12` — `fix: close all remaining Phase 3 review findings`
-- `d160a61` — `docs: update PROGRESS.md post-verification`
+- `955cc9b` — `feat: Phase 4 final distribution + advanced intelligence`
+- `ed01d72` — `docs: sync all docs for Phase 4 completion`
 
 ---
 

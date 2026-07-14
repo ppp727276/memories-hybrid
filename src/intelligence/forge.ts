@@ -15,6 +15,16 @@ export class ForgePipeline {
 
   async run(profile = "default", batchSize = 10): Promise<ForgeResult> {
     const memories = this.storage.memory.getUnprocessedMemories(batchSize);
+    return this.processBatch(memories, profile);
+  }
+
+  async enrich(id: string, profile = "default"): Promise<ForgeResult> {
+    const memory = this.storage.memory.getById(id);
+    if (!memory) throw new Error(`memory not found: ${id}`);
+    return this.processBatch([memory], profile);
+  }
+
+  private async processBatch(memories: Memory[], profile: string): Promise<ForgeResult> {
     let processed = 0;
     let insights = 0;
     let personas = 0;

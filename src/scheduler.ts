@@ -5,8 +5,11 @@ import { ForgePipeline } from "./intelligence/forge.ts";
 import { DreamPipeline } from "./intelligence/dream.ts";
 import { VaultSync } from "./intelligence/sync.ts";
 
-function matchesCronPart(value: number, part: string, max: number): boolean {
-  if (part === "*") return true;
+export function matchesCronPart(value: number, part: string, max: number): boolean {
+  if (part === "*") {
+    if (value < 0 || value > max) return false;
+    return true;
+  }
   if (part.includes("/")) {
     const [range, step] = part.split("/");
     const start = range === "*" ? 0 : parseInt(range, 10);
@@ -16,6 +19,7 @@ function matchesCronPart(value: number, part: string, max: number): boolean {
     return part.split(",").some((p) => parseInt(p, 10) === value);
   }
   const parsed = parseInt(part, 10);
+  if (parsed < 0 || parsed > max) return false;
   return parsed === value;
 }
 
@@ -34,6 +38,7 @@ interface Schedule {
   name: string;
   pattern: string;
   lastRun: string;
+  job?: () => Promise<void> | void;
 }
 
 export class CapricornScheduler {
@@ -54,6 +59,10 @@ export class CapricornScheduler {
     }
   }
 
+  addJob(name: string, pattern: string, job: () => Promise<void> | void) {
+    this.schedules.push({ name, pattern, lastRun: "", job });
+  }
+
   start() {
     if (this.interval) return;
     this.tick();
@@ -68,19 +77,25 @@ export class CapricornScheduler {
     this.storage.close();
   }
 
-  private async tick() {
-    const now = new Date();
+  tick(date = new Date()) {
     for (const schedule of this.schedules) {
-      if (cronMatch(now, schedule.pattern)) {
-        const key = `${schedule.pattern}_${now.getFullYear()}-${now.getMonth()}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}`;
+      if (cronMatch(date, schedule.pattern)) {
+        const key = `${schedule.pattern}_${date.getFullYear()}-${date.getMonth()}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}`;
         if (schedule.lastRun === key) continue;
         schedule.lastRun = key;
-        await this.runJob(schedule.name);
+        this.runJob(schedule);
       }
     }
   }
 
-  private async runJob(name: string) {
+  private runJob(schedule: Schedule) {
+    if (schedule.job) {
+      return schedule.job();
+    }
+    return this.runBuiltIn(schedule.name);
+  }
+
+  private async runBuiltIn(name: string) {
     try {
       switch (name) {
         case "bridge": {

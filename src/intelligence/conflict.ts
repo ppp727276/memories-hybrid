@@ -19,7 +19,13 @@ export interface Conflict {
   reason: string;
 }
 
-export function detectConflicts(preferences: Preference[]): Conflict[] {
+export interface ConflictPreference {
+  id: string;
+  body: string;
+  tier: string;
+}
+
+export function detectConflicts(preferences: ConflictPreference[]): Conflict[] {
   const confirmed = preferences.filter((p) => p.tier === "confirmed");
   const conflicts: Conflict[] = [];
   for (let i = 0; i < confirmed.length; i++) {

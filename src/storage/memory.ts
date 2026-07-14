@@ -131,6 +131,17 @@ export class MemoryStore {
     return { ...row, tags: parseTags(row.tags), metadata: JSON.parse(row.metadata) } as Memory;
   }
 
+  getRandomMemories(limit = 10): Memory[] {
+    const rows = queryAll<Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }>(
+      this.db,
+      `SELECT m.* FROM memories m
+       ORDER BY RANDOM()
+       LIMIT ?`,
+      limit,
+    );
+    return rows.map((r) => ({ ...r, tags: parseTags(r.tags), metadata: JSON.parse(r.metadata) })) as Memory[];
+  }
+
   // Phase 3: enrichment helpers
 
   getUnprocessedMemories(limit = 100): Memory[] {

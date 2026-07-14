@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "node:fs";
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
-import type { MemoryInput, Preference } from "../types.ts";
+import type { MemoryInput } from "../types.ts";
 import { createLLMRunner, ForgePipeline, DreamPipeline, VaultSync } from "../intelligence/index.ts";
 import { CapricornScheduler } from "../scheduler.ts";
 
@@ -244,10 +244,12 @@ async function main(argv: string[]) {
     const storage = makeStorage();
     const { BenchmarkRunner } = await import("../benchmark.ts");
     const runner = new BenchmarkRunner(storage, loadConfig());
-    const cases: { query: string; expectedId: string }[] = [];
-    const memories = storage.search("*", 1000);
-    for (let i = 0; i < Math.min(10, memories.length); i++) {
-      cases.push({ query: memories[i].content, expectedId: memories[i].id });
+    const memories = storage.memory.getRandomMemories(10);
+    const cases = memories.map((m) => ({ query: m.content, expectedId: m.id }));
+    if (cases.length === 0) {
+      console.log(JSON.stringify({ error: "no memories to benchmark" }, null, 2));
+      storage.close();
+      return;
     }
     const result = await runner.run("self-recall", cases);
     console.log(JSON.stringify(result, null, 2));
@@ -258,9 +260,10 @@ async function main(argv: string[]) {
   if (command === "conflicts") {
     const storage = makeStorage();
     const { detectConflicts } = await import("../intelligence/conflict.ts");
-    const prefs = storage.memory.getAllPreferences() as unknown as Preference[];
+    const rows = storage.memory.getAllPreferences();
+    const prefs = rows.map((p) => ({ id: p.id, body: p.body, tier: p.tier }));
     const conflicts = detectConflicts(prefs);
-    console.log(JSON.stringify({ conflicts }, null, 2));
+    console.log(JSON.stringify({ status: "conflicts_complete", count: conflicts.length, conflicts }, null, 2));
     storage.close();
     return;
   }
@@ -282,9 +285,7 @@ async function main(argv: string[]) {
     const storage = makeStorage();
     const llm = createLLMRunner(loadConfig());
     const forge = new ForgePipeline(storage, llm);
-    const memory = storage.memory.getById(id);
-    if (!memory) throw new Error("memory not found");
-    const result = await forge.run("default", 1);
+    const result = await forge.enrich(id);
     console.log(JSON.stringify({ status: "enrich_complete", result }, null, 2));
     storage.close();
     return;
