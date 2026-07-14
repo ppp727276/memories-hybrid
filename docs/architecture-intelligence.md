@@ -27,7 +27,7 @@ capricorn bridge
       Input:  raw memory content batch
       Output: 1024d vector → memories_vec
       Model:  text-embedding-v3 (API, may be batched)
-      Note:   L0 runs at cron time (6h). Until then, recall via FTS5 only.
+      Note:   L0 runs at `remember` time (vector table updated immediately). FTS5 is always available for recall.
 
     L1 — EXTRACTION (deepseek-v4-pro)
       Input:  memory content batch

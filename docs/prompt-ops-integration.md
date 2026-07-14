@@ -1,6 +1,6 @@
 # Prompt-ops Integration
 
-> Status: **Research / Phase 3+ candidate**. Not implemented yet.
+> Status: **Research / Phase 5 candidate**. Not implemented yet.
 
 This document describes how Meta's [`prompt-ops`](https://github.com/meta-llama/prompt-ops) could be integrated into the Capricorn v2 stack to optimize prompts used by Capricorn, HaluGard, and HyperTune.
 

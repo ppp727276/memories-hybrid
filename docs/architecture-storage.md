@@ -202,10 +202,9 @@ Agent: capricorn remember "User prefers dark mode" --tags preference,ui --import
   3. FTS5 INDEX (auto via trigger)
      └─ memories_fts updated
 
-  4. VECTOR INDEX (runs at cron — NOT synchronous)
-     └─ L0 embedding runs during Bridge cron (6h)
-     └─ Until then: recall works via FTS5 only
-     └─ After cron: vector index populated, hybrid recall enabled
+  4. VECTOR INDEX (runs at `remember` time)
+     └─ L0 embedding is computed synchronously when `remember` is called
+     └─ After embedding: vector table populated, hybrid recall enabled
 
   5. VAULT WRITE-THROUGH
      └─ write Brain/inbox/sig-{timestamp}-{slug}.md

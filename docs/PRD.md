@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending.
+> **Status: pre-alpha.** Phase 1 through Phase 4 implemented. Phase 5 research. See [PROGRESS](PROGRESS.md) for details.
 >
 > See [PROGRESS.md](PROGRESS.md) for implementation status.
 
@@ -14,7 +14,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 **Capricorn solves this:** dual-engine architecture that stores AND understands.
 
-> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending.
+> **Status: pre-alpha.** Phase 1 through Phase 4 implemented. Phase 5 research. See [PROGRESS](PROGRESS.md) for details.
 >
 > See [PROGRESS.md](PROGRESS.md) for implementation status.
 
@@ -27,7 +27,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 | **Phase 1** | ✅ Done | FTS5-only core |
 | **Phase 2** | ✅ Done | Vector search + multi-agent setup |
 | **Phase 3** | ✅ Done | Enrichment pipeline port |
-| **Phase 4** | ⏸️ Blocked on P3 | Distribution + benchmarks |
+| **Phase 4** | ✅ Done | Distribution + benchmarks + advanced intelligence |
 | **Phase 5** | ⏸️ Future | Prompt-ops integration (research) |
 
 ---

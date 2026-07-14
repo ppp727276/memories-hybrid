@@ -222,11 +222,12 @@ capricorn migrate --from-v1 --vault ~/Documents/second-brain-memory
 - Confidence scoring with source_weight, validation layer (HyperTune + HaluGard)
 - active.md / persona.md regeneration
 
-### Phase 4 — Distribution & Polish
-- `npm publish` (Phase 1-2: npm install -g capricorn)
-- `capricorn setup <agent>` auto-config (Phase 1: Hermes, Phase 2: Claude/Codex/Cursor)
-- Binary distribution via Bun compile (Phase 3-4)
-- Benchmarks (LongMemEval, BEAM), semantic conflict detection, temporal KG
+### Phase 4 — Distribution & Advanced Intelligence (DONE)
+- `npm publish` + `build:binary` scripts configured
+- `capricorn setup <agent>` auto-config for Hermes/Claude/Codex/Cursor/Windsurf
+- Binary distribution via `bun build --compile`
+- Benchmarks (`capricorn benchmark`), semantic conflict detection (`capricorn conflicts`), temporal relations (`capricorn relations`)
+- Cron scheduler daemon (`capricorn cron`)
 
 ---
 

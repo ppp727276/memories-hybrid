@@ -2,11 +2,11 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 pending. See [PROGRESS.md](PROGRESS.md).
+> **Status:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅. See [PROGRESS.md](PROGRESS.md).
 
 ---
 
-## Quick Start (Phase 1 — unreleased)
+## Quick Start
 
 ```bash
 # Development
@@ -14,11 +14,30 @@ git clone <repo>
 cd capricorn
 bun install && bun run typecheck
 
-# Production (Phase 4 — not yet available)
+# Production
 npm install -g capricorn
 capricorn init
 capricorn setup hermes
 ```
+
+---
+
+## CLI Commands
+
+| Command | Description |
+|---|---|
+| `capricorn init` | Initialize vault + database |
+| `capricorn remember "..."` | Store a memory |
+| `capricorn recall <query>` | Search memories |
+| `capricorn bridge` | Run Forge enrichment |
+| `capricorn dream` | Run Dream preference compounding |
+| `capricorn sync` | Two-way vault ↔ SQLite sync |
+| `capricorn cron` | Start background scheduler |
+| `capricorn explain <id>` | Show memory + insights |
+| `capricorn enrich <id>` | On-demand enrichment |
+| `capricorn benchmark` | Self-recall + latency benchmark |
+| `capricorn conflicts` | Find contradictory preferences |
+| `capricorn relations <id>` | Show temporal relations |
 
 ---
 
@@ -54,7 +73,7 @@ Agent ──MCP──→ Capricorn
 |---|---|---|---|---|
 | **Storage** | SQLite + vault (md) | SQLite | SQLite | SQLite |
 | **Search** | Hybrid: FTS5 + vector + RRF | Hybrid | Hybrid | FTS5 only |
-| **LLM Enrichment** | ✅ L0→L1→L2→L3 | ❌ | ⚠️ shallow | ❌ |
+| **LLM Enrichment** | ✅ L1→L3 | ❌ | ⚠️ | ❌ |
 | **Compounding Prefs** | ✅ confidence | ❌ | ❌ | ❌ |
 | **Persona Generation** | ✅ | ❌ | ❌ | ❌ |
 | **Anti-hallucination** | ✅ readable vault | ❌ | ❌ | ❌ |
