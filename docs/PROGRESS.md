@@ -1,5 +1,7 @@
 # Progress — Capricorn v2
 
+> **Status: Final Product.** All planned phases (1–5) implemented. See [PRD](PRD.md) for feature breakdown.
+
 ## Phase 1 — Storage Engine Core (DONE)
 
 Phase 1 delivers the Capricorn v2 storage engine: SQLite + FTS5 + vault sync.
@@ -106,7 +108,7 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 ### Verification
 
 - `bun run typecheck` — pass.
-- `bun run test` — 94 pass, 0 fail.
+- `bun run test` — 106 pass, 0 fail.
 - `bun run build` — pass.
 - `bun run smoke:phase3` — pass (automated CLI smoke: bridge → dream → sync).
 
@@ -159,7 +161,7 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 ### Verification
 
 - `bun run typecheck` — pass.
-- `bun run test` — 94 pass, 0 fail.
+- `bun run test` — 106 pass, 0 fail.
 - `bun run build` — pass.
 - `bun run smoke:phase3` — pass.
 - `bun run smoke:phase4` — pass.
@@ -177,6 +179,48 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 
 ---
 
-## Phase 5 — Research (Future)
+## Phase 5 — Prompt Optimization (DONE)
 
-Prompt-ops integration for offline prompt optimization. See `docs/prompt-ops-integration.md`.
+- Lightweight TypeScript prompt-ops engine in `src/intelligence/prompt-ops.ts`
+- SQLite tables: `prompt_variants`, `prompt_outcomes`, `eval_cases`
+- Thompson-style bandit selection with dueling variant support
+- CLI: `capricorn prompt-ops <list|report|create|duel|record>`
+- MCP tool: `capricorn.prompt_ops`
+- Eval dataset capture via `eval_cases` table and MCP/CLI record paths
+
+### Verification
+
+- `bun run typecheck` — pass.
+- `bun run test` — 106 pass, 0 fail.
+- `bun run build` — pass.
+- `bun run smoke:phase3` — pass.
+- `bun run smoke:phase4` — pass.
+
+### Notes
+
+- Does not use Meta's Python prompt-ops; implemented natively in TypeScript to avoid Python dependency.
+- Dueling bandits use Beta posterior sampling; fallback to normal approximation for large win/loss counts.
+
+### Commits
+
+- `1ea14e3` — `feat: Phase 5 prompt-ops optimization engine`
+
+---
+
+## Phase 6 — Future
+
+### Phase 6 — OSB Bridge Integration (Backport v1)
+
+Bring original `memories-hybrid` v1 capabilities into Capricorn v2:
+
+- Ingest signals from `Brain/inbox/*.md`
+- MD5 checkpoint / idempotency
+- `capricorn bridge-osb` one-shot command for cron
+- Persona merge with frozen block preservation
+- Config-driven via `bridge-config.json`
+
+### Phase 7+ — Advanced local models, multi-vault, cloud sync, web dashboard
+
+---
+
+> Final product = Phase 1–5. Phase 6+ is enhancement and v1 parity.

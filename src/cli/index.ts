@@ -268,6 +268,42 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "prompt-ops") {
+    const sub = positional[1] ?? "report";
+    const taskArg = args["task"] ?? args["t"] ?? "context";
+    const task = String(taskArg);
+    const storage = makeStorage();
+    if (sub === "list") {
+      const variants = storage.promptOps.getVariants(task);
+      console.log(JSON.stringify({ task, variants }, null, 2));
+    } else if (sub === "report") {
+      const report = storage.promptOps.report(task);
+      console.log(JSON.stringify({ task, report }, null, 2));
+    } else if (sub === "create") {
+      const name = positional[2];
+      const template = positional[3];
+      if (!name || !template) throw new Error("usage: prompt-ops create <name> <template> [--task context]");
+      const variant = storage.promptOps.createVariant(task, name, template);
+      console.log(JSON.stringify({ created: variant }, null, 2));
+    } else if (sub === "duel") {
+      const winner = positional[2];
+      const loser = positional[3];
+      if (!winner || !loser) throw new Error("usage: prompt-ops duel <winner-id> <loser-id>");
+      storage.promptOps.recordDuel(winner, loser);
+      console.log(JSON.stringify({ status: "duel_recorded", winner, loser }, null, 2));
+    } else if (sub === "record") {
+      const variantId = positional[2];
+      const score = parseFloat(positional[3] ?? "0");
+      if (!variantId || Number.isNaN(score)) throw new Error("usage: prompt-ops record <variant-id> <score>");
+      storage.promptOps.recordOutcome(variantId, "", "", score);
+      console.log(JSON.stringify({ status: "outcome_recorded", variantId, score }, null, 2));
+    } else {
+      console.log(JSON.stringify({ error: `unknown prompt-ops subcommand: ${sub}` }, null, 2));
+    }
+    storage.close();
+    return;
+  }
+
   if (command === "relations") {
     const id = positional[1];
     if (!id) throw new Error("id required");
@@ -310,8 +346,10 @@ Commands:
   enrich <id>
   benchmark
   conflicts
-  relations <id>`);
+  relations <id>
+  prompt-ops <list|report|create|duel|record> [--task context]`);
 }
+
 
 if (import.meta.main) {
   main(process.argv).catch((err) => {

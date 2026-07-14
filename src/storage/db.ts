@@ -124,6 +124,52 @@ CREATE INDEX IF NOT EXISTS idx_enrichment_state_status ON enrichment_state(statu
 ALTER TABLE preference_evidence ADD COLUMN source_type TEXT DEFAULT 'user_explicit';
 ALTER TABLE preference_evidence ADD COLUMN source_weight REAL DEFAULT 1.0;`,
   },
+  {
+    id: 3,
+    name: "phase 5 prompt ops",
+    sql: `-- prompt optimization (Phase 5)
+CREATE TABLE IF NOT EXISTS prompt_variants (
+  id          TEXT PRIMARY KEY,
+  task        TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  template    TEXT NOT NULL,
+  alpha       REAL NOT NULL DEFAULT 1.0,
+  beta        REAL NOT NULL DEFAULT 1.0,
+  wins        INTEGER NOT NULL DEFAULT 0,
+  losses      INTEGER NOT NULL DEFAULT 0,
+  score_sum   REAL NOT NULL DEFAULT 0.0,
+  score_count INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_prompt_variants_task ON prompt_variants(task);
+
+CREATE TABLE IF NOT EXISTS prompt_outcomes (
+  id          TEXT PRIMARY KEY,
+  variant_id  TEXT NOT NULL REFERENCES prompt_variants(id) ON DELETE CASCADE,
+  task        TEXT NOT NULL,
+  input       TEXT NOT NULL,
+  output      TEXT NOT NULL,
+  score       REAL NOT NULL,
+  metadata    TEXT DEFAULT '{}',
+  created_at  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_prompt_outcomes_variant ON prompt_outcomes(variant_id);
+CREATE INDEX IF NOT EXISTS idx_prompt_outcomes_task ON prompt_outcomes(task);
+
+CREATE TABLE IF NOT EXISTS eval_cases (
+  id          TEXT PRIMARY KEY,
+  task        TEXT NOT NULL,
+  input       TEXT NOT NULL,
+  expected    TEXT,
+  source      TEXT,
+  metadata    TEXT DEFAULT '{}',
+  created_at  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_eval_cases_task ON eval_cases(task);`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {

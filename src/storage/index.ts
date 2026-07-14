@@ -6,6 +6,7 @@ import { VaultWriter } from "./vault.ts";
 import type { MemoryInput, SearchResult } from "../types.ts";
 import { createEmbedder, type Embedder } from "../embeddings.ts";
 import type { CapricornConfig } from "../types.ts";
+import { PromptOptimizer } from "../intelligence/prompt-ops.ts";
 
 export { MemoryStore, VaultWriter };
 export type { MemoryInput, SearchResult };
@@ -15,6 +16,7 @@ export class CapricornStorage {
   memory: MemoryStore;
   vault: VaultWriter;
   embedder: Embedder;
+  promptOps: PromptOptimizer;
   dbPath: string;
   vaultPath: string;
 
@@ -24,6 +26,7 @@ export class CapricornStorage {
     this.db = openDatabase(dbPath);
     this.memory = new MemoryStore(this.db);
     this.vault = new VaultWriter(vaultPath);
+    this.promptOps = new PromptOptimizer(this.db);
     this.embedder = config ? createEmbedder(config) : { enabled: () => false, embed: () => { throw new Error("no config"); }, dimensions: () => 0 };
     migrate(this.db);
   }

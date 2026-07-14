@@ -148,8 +148,41 @@ export async function handleTool(
     const { createLLMRunner, ForgePipeline } = await import("../intelligence/index.ts");
     const llm = createLLMRunner(loadConfig());
     const forge = new ForgePipeline(storage, llm);
-    const result = await forge.run("default", 1);
+    const result = await forge.enrich(id);
     return { status: "enrich_complete", result };
+  }
+
+  if (method === "capricorn.prompt_ops") {
+    const sub = String(params.sub ?? "report");
+    const task = String(params.task ?? "context");
+    if (sub === "list") {
+      return { task, variants: storage.promptOps.getVariants(task) };
+    }
+    if (sub === "report") {
+      return { task, report: storage.promptOps.report(task) };
+    }
+    if (sub === "create") {
+      const name = String(params.name ?? "");
+      const template = String(params.template ?? "");
+      if (!name || !template) throw new Error("name and template required");
+      return { task, variant: storage.promptOps.createVariant(task, name, template) };
+    }
+    if (sub === "record") {
+      const variantId = String(params.variant_id ?? "");
+      const score = Number(params.score ?? 0);
+      const input = String(params.input ?? "");
+      const output = String(params.output ?? "");
+      if (!variantId) throw new Error("variant_id required");
+      return { task, outcome: storage.promptOps.recordOutcome(variantId, input, output, score, typeof params.metadata === "object" && params.metadata !== null ? (params.metadata as Record<string, unknown>) : {}) };
+    }
+    if (sub === "duel") {
+      const winner = String(params.winner ?? "");
+      const loser = String(params.loser ?? "");
+      if (!winner || !loser) throw new Error("winner and loser required");
+      storage.promptOps.recordDuel(winner, loser);
+      return { status: "duel_recorded", winner, loser };
+    }
+    throw new Error(`unknown prompt_ops subcommand: ${sub}`);
   }
 
   throw new Error(`unknown method: ${method}`);

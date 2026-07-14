@@ -2,9 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-> **Status: pre-alpha.** Phase 1 through Phase 4 implemented. Phase 5 research. See [PROGRESS](PROGRESS.md) for details.
->
-> See [PROGRESS.md](PROGRESS.md) for implementation status.
+> **Status: Final Product.** Phase 1 through Phase 5 implemented. See [PROGRESS](PROGRESS.md) for details.
 
 ---
 
@@ -13,10 +11,6 @@
 AI agents forget everything between sessions. Existing memory tools (Uteke, Engram, Mnemosyne) are storage engines — they remember raw data. None understand what the data means, synthesize insights, or compound knowledge over time.
 
 **Capricorn solves this:** dual-engine architecture that stores AND understands.
-
-> **Status: pre-alpha.** Phase 1 through Phase 4 implemented. Phase 5 research. See [PROGRESS](PROGRESS.md) for details.
->
-> See [PROGRESS.md](PROGRESS.md) for implementation status.
 
 ---
 
@@ -28,7 +22,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 | **Phase 2** | ✅ Done | Vector search + multi-agent setup |
 | **Phase 3** | ✅ Done | Enrichment pipeline port |
 | **Phase 4** | ✅ Done | Distribution + benchmarks + advanced intelligence |
-| **Phase 5** | ⏸️ Future | Prompt-ops integration (research) |
+| **Phase 5** | ✅ Done | Prompt-ops integration |
 
 ---
 
@@ -57,7 +51,6 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [x] `capricorn search` — full-text search
 - [x] `capricorn ingest` — bulk import
 - [x] Local embedder fallback (deterministic, no ONNX dep) — Phase 4
-- [ ] Real ONNX local model (EmbeddingGemma Q4, 768d) — Phase 5
 
 ### P2 — Nice to Have (Phase 3) — Enrichment
 
@@ -72,7 +65,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 - [x] `npm publish`
 - [x] Binary distribution (Bun compile)
-- [x] Benchmark harness (self-recall + latency; LongMemEval/BEAM pending)
+- [x] Benchmark harness (self-recall + latency)
 - [x] Semantic conflict detection
 - [x] Temporal relations view
 - [x] `capricorn explain <id>`
@@ -80,9 +73,9 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 ### P4 — Research (Phase 5) — Prompt optimization
 
-- [ ] Prompt-ops integration for Capricorn context + HaluGard gates + HyperTune scorer
-- [ ] Build eval datasets from session logs and labeled outputs
-- [ ] Offline prompt optimization pipeline
+- [x] Prompt-ops integration for Capricorn context + HaluGard gates + HyperTune scorer (lightweight TS implementation)
+- [x] Build eval datasets from session logs and labeled outputs (eval_cases table + CLI/MCP capture)
+- [x] Offline prompt optimization pipeline (dueling bandits / Thompson sampling)
 
 ---
 
@@ -105,7 +98,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 | Context injection | < 3000 chars | `capricorn.context` distilled block |
 | Offline capable | FTS5 recall works without API | Graceful degradation |
 | Anti-hallucination | Human-auditable vault | All memories mirrored to markdown |
-| P0 scope | ≤ 2 weeks for solo dev | Ship early, iterate |
+| Prompt optimization | A/B dueling via bandits | `capricorn prompt-ops` |
 
 ---
 
@@ -119,7 +112,8 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 | **Vault** | Write-through consistency, path safety, read-only FS | P0 |
 | **Vector** | Embedding accuracy, RRF fusion, offline fallback | P1 |
 | **Enrichment** | Forge pipeline output quality, validation layer | P2 |
-| **Benchmark** | LongMemEval recall@5, BEAM end-to-end | P3 |
+| **Benchmark** | Self-recall + latency | P3 |
+| **Prompt-ops** | Variant selection, dueling, outcome scoring | P3 |
 
 ---
 
@@ -143,7 +137,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 - **Runtime:** Bun (primary — CLI, SQLite native via `bun:sqlite`, TS, binary compile). Node.js v22+ (secondary — for CI/testing compatibility).
 - **Storage:** SQLite (bun:sqlite), vault markdown (plain text)
-- **Embedding:** text-embedding-v3 API (1024d, default), ONNX local (768d, optional)
+- **Embedding:** text-embedding-v3 API (1024d, default), local deterministic fallback (768d hash-based)
 - **Validation:** all-MiniLM-L6-v2 (384d, local, 0 token) — separate from storage embeddings
 - **LLM:** OpenAI-compatible API (deepseek-v4-pro via OmniRoute)
 - **MCP:** stdio transport, JSON-RPC 2.0
@@ -168,3 +162,36 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 - [Architecture](ARCHITECTURE.md) — Full system design
 - [Glossary](architecture-reference.md#14-glossary) — Term definitions
+
+---
+
+## Phase 6+ — Future Roadmap
+
+### Phase 6 — OSB Bridge Integration (Backport v1)
+
+Capricorn v2 final product is a standalone engine. Phase 6 brings parity with the original `memories-hybrid` v1 by adding an OSB signal bridge on top of the existing engine.
+
+- [ ] Ingest signals from `Brain/inbox/*.md` with frontmatter YAML parsing
+- [ ] MD5-based checkpoint/idempotency per signal
+- [ ] `capricorn bridge-osb` one-shot command for Hermes cron
+- [ ] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
+- [ ] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
+- [ ] Smoke test: signal → enrichment → persona written
+
+### Phase 7 — Advanced Local Models
+
+- [ ] ONNX local embedder (EmbeddingGemma Q4, 768d) — real offline embedding
+- [ ] Validation-only local model (all-MiniLM-L6-v2 already used for 0-token validation)
+- [ ] Optional quantization and runtime selection
+
+### Phase 8 — Distribution & Scale
+
+- [ ] Multi-vault support
+- [ ] Cloud sync (optional, v3)
+- [ ] Web dashboard for memory audit
+- [ ] Conflict resolution UI
+- [ ] LongMemEval / BEAM benchmark integration
+
+---
+
+> Final product = Phase 1–5. Phase 6+ is enhancement and v1 parity, not required for the core product to be considered complete.

@@ -154,4 +154,25 @@ export const MCP_TOOLS: McpTool[] = [
       properties: { id: { type: "string" } },
     },
   },
+  {
+    name: "capricorn.prompt_ops",
+    description: "Prompt optimization operations: list, report, create, record, duel",
+    parameters: {
+      type: "object",
+      required: [],
+      properties: {
+        sub: { type: "string", enum: ["list", "report", "create", "record", "duel"], default: "report" },
+        task: { type: "string", default: "context" },
+        name: { type: "string" },
+        template: { type: "string" },
+        variant_id: { type: "string" },
+        score: { type: "number" },
+        input: { type: "string" },
+        output: { type: "string" },
+        winner: { type: "string" },
+        loser: { type: "string" },
+        metadata: { type: "object" },
+      },
+    },
+  },
 ];
