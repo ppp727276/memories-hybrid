@@ -16,4 +16,5 @@ tencentdb/
 bun.lockb
 dist/
 .env
-.env.*
+.env.*review-*.md
+docs/review-*.md

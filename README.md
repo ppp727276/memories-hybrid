@@ -2,7 +2,7 @@
 
 **"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine for AI agents.
 
-> **Status: pre-alpha.** Phase 1 through Phase 3 implemented. Phase 4 pending. See [PRD](docs/PRD.md) for status.
+> **Status: pre-alpha.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅. Phase 4 pending. See [PRD](docs/PRD.md) for status.
 
 ---
 
@@ -28,7 +28,7 @@ AI agents forget. Existing tools (Uteke, Engram, Mnemosyne) remember raw data. C
 
 | | Capricorn | Uteke | Mnemosyne | Engram |
 |---|---|---|---|---|
-| **LLM Enrichment** | ✅ L0→L3 | ❌ | ⚠️ | ❌ |
+| **LLM Enrichment** | ✅ L1→L3 (L0 via Phase 2 embeddings) | ❌ | ⚠️ | ❌ |
 | **Compounding Prefs** | ✅ | ❌ | ❌ | ❌ |
 | **Persona Generation** | ✅ | ❌ | ❌ | ❌ |
 | **Anti-hallucination** | ✅ | ❌ | ❌ | ❌ |

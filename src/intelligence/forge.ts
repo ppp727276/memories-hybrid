@@ -95,8 +95,7 @@ export class ForgePipeline {
     });
 
     if (validation.score < 0.4 || validation.flags.length > 0) {
-      // Store anyway but flag in metadata
-      this.storage.memory.addInsight(memory.id, "L3", text, { validation: validation.flags, score: validation.score });
+      // Advisory flag only; processMemory will store the insight
       return text;
     }
 

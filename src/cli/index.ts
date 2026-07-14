@@ -220,11 +220,11 @@ Commands:
   search <query> [--limit n] [--project x]
   forget <id>
   stats
-  context [--max-chars n]
+  context [--max-chars n] (outputs JSON)
   ingest <file>
   setup <hermes|claude|codex|cursor|windsurf>
   bridge [--profile p] [--batch-size n]
-  dream [--profile p]
+  dream [--profile <name>]
   sync`);
 }
 

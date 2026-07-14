@@ -62,12 +62,17 @@ export class VaultSync {
     const lines = content.split("\n");
     const frontmatter: Record<string, string> = {};
     let inFrontmatter = false;
-    let body = "";
     let started = false;
+    let body = "";
     for (const line of lines) {
-      if (line.trim() === "---" && !started) {
-        inFrontmatter = !inFrontmatter;
+      const isDelimiter = line.trim() === "---";
+      if (isDelimiter && !started) {
+        inFrontmatter = true;
         started = true;
+        continue;
+      }
+      if (isDelimiter && started && inFrontmatter) {
+        inFrontmatter = false;
         continue;
       }
       if (inFrontmatter) {

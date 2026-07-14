@@ -42,6 +42,7 @@ describe("VaultSync", () => {
     const stored = storage.memory.getById(id);
     expect(stored).not.toBeNull();
     expect(stored?.id).toBe(id);
+    expect(stored?.content).toBe("Test sync signal");
   });
 
   it("round-trips a DB memory to vault", async () => {

@@ -107,12 +107,14 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 
 - `bun run typecheck` — pass.
 - `bun run test` — 94 pass, 0 fail.
-- Manual CLI smoke test: `init` → `remember` → `bridge` → `dream` → `sync` passed.
+- `bun run build` — pass.
+- `bun run smoke:phase3` — pass (automated CLI smoke: bridge → dream → sync).
 
 ### Notes
 
 - Forge enrichment is disabled when `CAPRICORN_LLM_BASE_URL` is unset and `intelligence.forge.llm_provider` is `"none"`; the pipeline marks unprocessed memories as skipped without crashing.
 - Validation layer currently uses heuristic similarity when real embeddings are unavailable; the interface accepts an optional `embed` function for future 384d local embedder integration. HaluGard G2 claim-verify is a placeholder (length heuristic) pending SQLite evidence search.
+- Forge L3 persona/insight validation is advisory-only: validation flags are attached to insight metadata but never block storage. A hard gate is planned for Phase 4.
 - Cron scheduler daemon is not implemented yet; `bridge`/`dream`/`sync` are cron-ready one-shot commands intended to be wired to an external scheduler in Phase 4.
 
 ### Post-Review Fixes
