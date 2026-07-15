@@ -40,8 +40,8 @@ export function startMcpServer() {
       let req: JsonRpcRequest;
       try {
         req = JSON.parse(line) as JsonRpcRequest;
-      } catch {
-        process.stdout.write(JSON.stringify(makeError(undefined, -32700, "Parse error")) + "\n");
+      } catch (err) {
+        process.stdout.write(JSON.stringify(makeError(undefined, -32700, "Parse error: " + String(err))) + "\n");
         continue;
       }
       handleMcpRequest(req, storage)

@@ -42,10 +42,15 @@ export class CapricornStorage {
       }
     }
     const memory = this.memory.remember(input, embedding);
-    let vaultPath: string | undefined;
-    if (writeVault) {
-      vaultPath = this.vault.writeSignal(memory);
-    }
+        let vaultPath: string | undefined;
+        if (writeVault) {
+          try {
+            vaultPath = this.vault.writeSignal(memory);
+          } catch {
+            this.memory.forget(memory.id);
+            throw new Error("vault write failed, DB write rolled back");
+          }
+        }
     return { memory, vaultPath };
   }
 

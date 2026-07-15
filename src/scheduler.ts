@@ -24,7 +24,9 @@ export function matchesCronPart(value: number, part: string, max: number): boole
 }
 
 function cronMatch(date: Date, pattern: string): boolean {
-  const [minute, hour, dayOfMonth, month, dayOfWeek] = pattern.split(/\s+/);
+  const parts = pattern.split(/\s+/);
+  if (parts.length < 5) return false;
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
   return (
     matchesCronPart(date.getMinutes(), minute, 59) &&
     matchesCronPart(date.getHours(), hour, 23) &&
@@ -115,8 +117,8 @@ export class CapricornScheduler {
           break;
         }
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("capricorn: cron job failed:", String(err));
     }
   }
 }

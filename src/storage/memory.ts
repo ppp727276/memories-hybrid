@@ -324,8 +324,26 @@ export class MemoryStore {
   }
 
   deleteReviewQueue(id: string): void {
-    runSql(this.db, `DELETE FROM review_queue WHERE id = ?`, id);
-  }
+      runSql(this.db, `DELETE FROM review_queue WHERE id = ?`, id);
+    }
+
+    getCheckpoint(id: string): { md5: string } | null {
+      return queryGet<{ md5: string }>(this.db, "SELECT md5 FROM osb_signal_checkpoints WHERE id = ?", id) ?? null;
+    }
+
+    saveCheckpoint(id: string, filePath: string, md5: string, status: string): void {
+      runSql(
+        this.db,
+        `INSERT INTO osb_signal_checkpoints (id, file_path, md5, status, processed_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           file_path = excluded.file_path,
+           md5 = excluded.md5,
+           status = excluded.status,
+           processed_at = excluded.processed_at`,
+        id, filePath, md5, status, Date.now(),
+      );
+    }
 
   private ftsSearch(queryText: string, limit: number, project: string | null): MemoryRow[] {
     const projectClause = project ? "AND m.project = ?" : "";

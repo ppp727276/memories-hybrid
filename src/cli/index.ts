@@ -249,7 +249,7 @@ async function main(argv: string[]) {
     const memories = storage.memory.getRandomMemories(10);
     const cases = memories.map((m) => ({ query: m.content, expectedId: m.id }));
     if (cases.length === 0) {
-      console.log(JSON.stringify({ error: "no memories to benchmark" }, null, 2));
+          console.log(JSON.stringify({ status: "empty", message: "Add some memories first. Try: capricorn remember 'hello world'", hint: "Requires at least 1 memory for self-recall benchmark" }, null, 2));
       storage.close();
       return;
     }
@@ -307,12 +307,13 @@ async function main(argv: string[]) {
   }
 
   if (command === "relations") {
-    const id = positional[1];
-    if (!id) throw new Error("id required");
-    const storage = makeStorage();
-    const memory = storage.memory.getById(id);
-    const related = storage.memory.search("", 1000).filter((m) => m.id !== id);
-    console.log(JSON.stringify({ id, memory, related }, null, 2));
+      const id = positional[1];
+      if (!id) throw new Error("id required");
+      const storage = makeStorage();
+      const memory = storage.memory.getById(id);
+      const related = storage.memory.search("", 50).filter((m) => m.id !== id);
+      related.sort((a, b) => b.created_at - a.created_at);
+      console.log(JSON.stringify({ id, memory, related_count: related.length, related }, null, 2));
     storage.close();
     return;
   }

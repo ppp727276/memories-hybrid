@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CapricornStorage } from "./index.ts";
 import type { Memory } from "../types.ts";
+import { parseSignalFile } from "../utils/signal.ts";
 
 export interface SyncResult {
   imported: number;
@@ -27,19 +28,19 @@ export class VaultSync {
         const path = join(inbox, entry.name);
         try {
           const content = readFileSync(path, "utf8");
-          const memory = this.parseSignalFile(content);
+          const memory = parseSignalFile(content);
           if (!memory) continue;
           const existing = this.storage.memory.getById(memory.id);
           if (!existing) {
             this.storage.memory.importMemory(memory);
             imported.push(memory);
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          console.error("capricorn: sync signal parse failed:", String(err));
         }
       }
-    } catch {
-      // directory may not exist
+    } catch (err) {
+      console.error("capricorn: sync inbox read failed:", String(err));
     }
     return imported;
   }
@@ -51,48 +52,10 @@ export class VaultSync {
       try {
         this.storage.vault.writeSignal(memory);
         count++;
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error("capricorn: sync vault write failed:", String(err));
       }
     }
     return count;
-  }
-
-  private parseSignalFile(content: string): Memory | null {
-    const lines = content.split("\n");
-    const frontmatter: Record<string, string> = {};
-    let inFrontmatter = false;
-    let started = false;
-    let body = "";
-    for (const line of lines) {
-      const isDelimiter = line.trim() === "---";
-      if (isDelimiter && !started) {
-        inFrontmatter = true;
-        started = true;
-        continue;
-      }
-      if (isDelimiter && started && inFrontmatter) {
-        inFrontmatter = false;
-        continue;
-      }
-      if (inFrontmatter) {
-        const [key, ...rest] = line.split(":");
-        if (key && rest.length > 0) frontmatter[key.trim()] = rest.join(":").trim();
-      } else {
-        body += line + "\n";
-      }
-    }
-    if (!frontmatter.id) return null;
-    return {
-      id: frontmatter.id,
-      content: body.trim(),
-      source: frontmatter.source ?? "user",
-      session_id: frontmatter.session_id ?? null,
-      project: frontmatter.project ?? null,
-      tags: frontmatter.tags ? frontmatter.tags.split(",").map((t) => t.trim()) : [],
-      metadata: {},
-      created_at: frontmatter.created_at ? new Date(frontmatter.created_at).getTime() : Date.now(),
-      updated_at: Date.now(),
-    };
   }
 }

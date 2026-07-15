@@ -51,8 +51,8 @@ export function loadConfig(): CapricornConfig {
   try {
     const raw = readFileSync(path, "utf8");
     overrides = JSON.parse(raw);
-  } catch {
-    // use defaults
+  } catch (err) {
+    console.error("capricorn: config load failed, using defaults:", String(err));
   }
   return mergeConfig(overrides);
 }

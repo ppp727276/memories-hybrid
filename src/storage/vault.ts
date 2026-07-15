@@ -43,12 +43,12 @@ export class VaultWriter {
             rmSync(path);
             return true;
           }
-        } catch {
-          // ignore unreadable files
+        } catch (err) {
+          console.error("capricorn: vault signal read failed:", String(err));
         }
       }
-    } catch {
-      // directory may not exist
+    } catch (err) {
+      console.error("capricorn: vault inbox read failed:", String(err));
     }
     return false;
   }

@@ -4,7 +4,6 @@ import { dirname, join, resolve } from "node:path";
 import { glob } from "glob";
 import YAML from "yaml";
 import type { CapricornStorage } from "../storage/index.ts";
-import { runSql, queryAll, queryGet } from "../utils/sqlite.ts";
 import type { OsbSignal, OsbBridgeResult } from "./types.ts";
 
 export interface OsbBridgeConfig {
@@ -101,7 +100,8 @@ export class OsbBridge {
     let meta: Record<string, unknown> = {};
     try {
       meta = YAML.parse(frontmatter) || {};
-    } catch {
+    } catch (err) {
+      console.error("capricorn: osb yaml parse failed:", String(err));
       return null;
     }
 
@@ -127,11 +127,7 @@ export class OsbBridge {
     const pending: OsbSignal[] = [];
     for (const signal of signals) {
       const hash = this.hash(signal.content);
-      const row = queryGet<{ md5: string }>(
-        this.storage.db,
-        "SELECT md5 FROM osb_signal_checkpoints WHERE id = ?",
-        [signal.id],
-      );
+      const row = this.storage.memory.getCheckpoint(signal.id);
       if (!row || row.md5 !== hash) {
         pending.push(signal);
       }
@@ -141,17 +137,7 @@ export class OsbBridge {
 
   private saveCheckpoint(signal: OsbSignal, status: "processed" | "failed"): void {
     const hash = this.hash(signal.content);
-    runSql(
-      this.storage.db,
-      `INSERT INTO osb_signal_checkpoints (id, file_path, md5, status, processed_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         file_path = excluded.file_path,
-         md5 = excluded.md5,
-         status = excluded.status,
-         processed_at = excluded.processed_at`,
-      [signal.id, signal.source, hash, status, Date.now()],
-    );
+    this.storage.memory.saveCheckpoint(signal.id, signal.source, hash, status);
   }
 
   private async mergePersona(dryRun: boolean): Promise<boolean> {
