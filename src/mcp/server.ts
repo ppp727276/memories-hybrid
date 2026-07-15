@@ -10,18 +10,11 @@ interface JsonRpcRequest {
   params?: Record<string, unknown>;
 }
 
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  id?: number | string;
-  result?: unknown;
-  error?: { code: number; message: string; data?: unknown };
-}
-
-function makeSuccess(id: number | string | undefined, result: unknown): JsonRpcResponse {
+function makeSuccess(id: number | string | undefined, result: unknown) {
   return { jsonrpc: "2.0", id, result };
 }
 
-function makeError(id: number | string | undefined, code: number, message: string): JsonRpcResponse {
+function makeError(id: number | string | undefined, code: number, message: string) {
   return { jsonrpc: "2.0", id, error: { code, message } };
 }
 
@@ -44,12 +37,15 @@ export function startMcpServer() {
         process.stdout.write(JSON.stringify(makeError(undefined, -32700, "Parse error: " + String(err))) + "\n");
         continue;
       }
+      const isNotification = req.id === undefined;
       handleMcpRequest(req, storage)
         .then((result) => {
+          if (isNotification) return; // never respond to notifications
           const res = makeSuccess(req.id, result);
           process.stdout.write(JSON.stringify(res) + "\n");
         })
         .catch((err) => {
+          if (isNotification) return;
           const res = makeError(req.id, -32000, err instanceof Error ? err.message : String(err));
           process.stdout.write(JSON.stringify(res) + "\n");
         });
@@ -64,11 +60,11 @@ async function handleMcpRequest(
   if (req.method === "initialize") {
     return {
       protocolVersion: "2024-11-05",
-      capabilities: {},
+      capabilities: { tools: {} },
       serverInfo: { name: "capricorn", version: "0.1.0" },
     };
   }
-  if (req.method === "initialized") {
+  if (req.method === "initialized" || req.method === "notifications/initialized") {
     return {};
   }
   if (req.method === "tools/list") {

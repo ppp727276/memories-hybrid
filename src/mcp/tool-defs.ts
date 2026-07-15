@@ -3,14 +3,14 @@ import type { CapricornStorage } from "../storage/index.ts";
 export interface McpTool {
   name: string;
   description: string;
-  parameters: Record<string, unknown>;
+  inputSchema: Record<string, unknown>;
 }
 
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.remember",
     description: "Store a memory",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["content"],
       properties: {
@@ -26,7 +26,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.recall",
     description: "Recall memories by keyword",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["query"],
       properties: {
@@ -39,7 +39,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.search",
     description: "Full-text keyword search",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["query"],
       properties: {
@@ -52,7 +52,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.forget",
     description: "Delete a memory",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["id"],
       properties: { id: { type: "string" } },
@@ -61,12 +61,12 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.stats",
     description: "Memory statistics",
-    parameters: { type: "object", properties: {} },
+    inputSchema: { type: "object", properties: {} },
   },
   {
     name: "capricorn.context",
     description: "Get distilled context for injection into agent system prompt",
-    parameters: {
+    inputSchema: {
       type: "object",
       properties: {
         profile: { type: "string", default: "default" },
@@ -77,7 +77,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.ingest",
     description: "Bulk import memories",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["memories"],
       properties: {
@@ -89,7 +89,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.brain_feedback",
     description: "Record user feedback on a preference",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["pref_id", "result"],
       properties: {
@@ -101,7 +101,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.brain_note",
     description: "Record a narrative milestone",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["content"],
       properties: { content: { type: "string" }, tags: { type: "array" } },
@@ -110,7 +110,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.bridge",
     description: "Run the Forge enrichment pipeline on unprocessed memories",
-    parameters: {
+    inputSchema: {
       type: "object",
       properties: {
         profile: { type: "string", default: "default" },
@@ -121,7 +121,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.dream",
     description: "Run the Dream preference compounding pass",
-    parameters: {
+    inputSchema: {
       type: "object",
       properties: {
         profile: { type: "string", default: "default" },
@@ -131,7 +131,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.sync",
     description: "Synchronize vault markdown files with SQLite storage",
-    parameters: {
+    inputSchema: {
       type: "object",
       properties: {},
     },
@@ -139,7 +139,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.explain",
     description: "Explain why a memory exists and list its insights",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["id"],
       properties: { id: { type: "string" } },
@@ -148,7 +148,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.enrich",
     description: "Run enrichment on a specific memory",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: ["id"],
       properties: { id: { type: "string" } },
@@ -157,7 +157,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.prompt_ops",
     description: "Prompt optimization operations: list, report, create, record, duel",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: [],
       properties: {
@@ -178,7 +178,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.bridgeOsb",
     description: "Run OSB bridge: ingest signals, enrich, and merge persona",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: [],
       properties: {
@@ -189,7 +189,7 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.review",
     description: "List, resolve, or dismiss review queue items from the validation layer",
-    parameters: {
+    inputSchema: {
       type: "object",
       required: [],
       properties: {
@@ -203,6 +203,6 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "capricorn.health",
     description: "Run health check: DB, vault, LLM, embedding, disk",
-    parameters: { type: "object", properties: {} },
+    inputSchema: { type: "object", properties: {} },
   },
 ]
