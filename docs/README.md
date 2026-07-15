@@ -1,106 +1,100 @@
-# Memories Hybrid
+# Capricorn v2 — Docs
 
-**One brain, one vault.** Deterministic memory capture + LLM enrichment pipeline.
+**"Mereka ingat, aku paham."** Storage Engine + Intelligence Engine.
 
-Combines [Open Second Brain](https://github.com/itechmeat/open-second-brain) (vault-based memory) with [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) (LLM enrichment) into a unified hybrid memory system.
+> **Status: Final Product.** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6 ✅. See [PROGRESS.md](PROGRESS.md).
 
-## Architecture
-
-```
-memory() tool → MEMORY.md (capture layer)
-     ↓
-on_memory_write hook → JSONL log
-     ↓
-Bridge (6h) → Forge pipeline
-     ├── L0: Embedding (text-embedding-v3)
-     ├── L1: Extraction (LLM)
-     ├── L2: Scene generation (LLM)
-     └── L3: Persona generation (LLM)
-     ↓
-Dream (hourly) → Preferences → active.md
-     ↓
-Context injection: MEMORY.md + active.md
-```
-
-## Features
-
-- **Deterministic capture** — every `memory()` call logged to vault
-- **LLM enrichment** — 4-layer pipeline: embed → extract → synthesize → persona
-- **Anti-hallucination** — vault is plain markdown, you can read/edit anytime
-- **Multi-agent** — OSB plugin supports Hermes, Claude, Codex, OpenClaw, and more
-- **Token efficient** — ~5000 chars injected vs ~7000+ default
-- **Compounding** — preferences accumulate evidence over time, confidence grows
-- **Profile shared** — memory shared across profiles, no re-introductions
+---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/ppp727276/memories-hybrid
-cd memories-hybrid
-bash scripts/install.sh
+# Development
+git clone <repo>
+cd capricorn
+bun install && bun run typecheck
+
+# Production
+npm install -g capricorn
+capricorn init
+capricorn setup hermes
 ```
 
-Then:
-1. Edit `bridge-config.json` — set your LLM API key
-2. Initialize vault: `o2b init --vault ~/Documents/second-brain-memory`
-3. Test: `npx tsx bridge/src/bridge.ts --config bridge-config.json --dry-run`
-4. Run: `npx tsx bridge/src/bridge.ts --config bridge-config.json`
+---
 
-## Directory Structure
+## CLI Commands
+
+| Command | Description |
+|---|---|
+| `capricorn init` | Initialize vault + database |
+| `capricorn remember "..."` | Store a memory |
+| `capricorn recall <query>` | Search memories |
+| `capricorn bridge` | Run Forge enrichment |
+| `capricorn bridge-osb` | Ingest OSB signals + enrich + merge persona |
+| `capricorn dream` | Run Dream preference compounding |
+| `capricorn sync` | Two-way vault ↔ SQLite sync |
+| `capricorn cron` | Start background scheduler |
+| `capricorn explain <id>` | Show memory + insights |
+| `capricorn enrich <id>` | On-demand enrichment |
+| `capricorn benchmark` | Self-recall + latency benchmark |
+| `capricorn conflicts` | Find contradictory preferences |
+| `capricorn relations <id>` | Show temporal relations |
+| `capricorn prompt-ops <sub>` | Prompt optimization (list/report/create/duel/record) |
+
+---
+
+## Architecture
 
 ```
-memories-hybrid/
-├── bridge/              ← Orchestrator code
-│   └── src/
-│       ├── bridge.ts         Pipeline orchestrator
-│       ├── seed-runner.ts    Forge engine runner
-│       ├── signal-converter.ts
-│       └── types.ts
-├── forge/               ← Enrichment engine (TencentDB)
-│   └── src/core/seed/       L0→L1→L2→L3 pipeline
-├── mind/                ← OSB plugin (multi-agent support)
-│   ├── .agents/             Agent definitions
-│   ├── .claude-plugin/      Claude support
-│   ├── .codex-plugin/       Codex support
-│   ├── openclaw/            OpenClaw support
-│   ├── plugins/             Agent plugins
-│   ├── src/                 Core source
-│   └── scripts/             o2b CLI
-├── scripts/             ← Tools
-│   ├── install.sh           One-command install
-│   ├── backup.sh            Vault backup (robocopy)
-│   └── prune-memory.py      Auto-prune MEMORY.md
-├── patches/             ← Engine patches
-│   ├── llm-runner-force-nonstream.patch
-│   └── pipeline-manager-l3-flush.patch
-├── docs/                ← Documentation
-│   ├── README.md
-│   ├── README.id.md
-│   ├── ARCHITECTURE.md
-│   └── INSTRUCTION.md
-└── bridge-config.example.json
+Agent ──MCP──→ Capricorn
+                ├── Storage Engine (sync)
+                │   └── SQLite + FTS5 + Vector + Vault (markdown)
+                ├── Intelligence Engine (async)
+                │   ├── Forge L1→L3 (enrichment)
+                │   └── Dream (compounding)
+                ├── Validation Layer (0 token)
+                │   ├── HyperTune scoring
+                │   └── HaluGard G2-G4
+                └── Prompt-Ops (optimization)
+                    └── Dueling bandits / Thompson sampling
 ```
 
-## Cron Jobs (recommended)
+---
 
-| Job | Schedule | Function |
-|---|---|---|
-| Bridge | `0 */6 * * *` | Signal → enrichment → persona |
-| Dream | `15 * * * *` | Inbox → preferences → active.md |
-| Backup | `0 2 * * *` | Vault → backup directory |
-| Prune | `0 3 * * 0` | Trim MEMORY.md (weekly) |
+## Docs Index
 
-## Requirements
+- [PRD](PRD.md) — Requirements, roadmap, status, testing strategy
+- [PROGRESS](PROGRESS.md) — Implementation status
+- [Architecture](ARCHITECTURE.md) — Full system design + glossary
+- [Prompt-ops Integration](prompt-ops-integration.md) — Phase 5 implementation
+- [Audit Prompt](audit-prompt.md) — Prompt for external agent QA review
 
-- Node.js v22+
-- Bun >= 1.1.0
-- Hermes Agent
-- LLM API (OpenAI-compatible)
+---
+
+## Features
+
+| Feature | Capricorn | Uteke | Mnemosyne | Engram |
+|---|---|---|---|---|
+| **Storage** | SQLite + vault (md) | SQLite | SQLite | SQLite |
+| **Search** | Hybrid: FTS5 + vector + RRF | Hybrid | Hybrid | FTS5 only |
+| **LLM Enrichment** | ✅ L1→L3 | ❌ | ⚠️ | ❌ |
+| **Compounding Prefs** | ✅ confidence | ❌ | ❌ | ❌ |
+| **Persona Generation** | ✅ | ❌ | ❌ | ❌ |
+| **Anti-hallucination** | ✅ readable vault | ❌ | ❌ | ❌ |
+| **Validation layer** | ✅ 0 token | ❌ | ❌ | ❌ |
+| **Prompt optimization** | ✅ dueling bandits | ❌ | ❌ | ❌ |
+
+---
 
 ## Based On
 
-- [Open Second Brain](https://github.com/itechmeat/open-second-brain) — vault-based memory provider
-- [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) — LLM enrichment pipeline
+- [Open Second Brain](https://github.com/itechmeat/open-second-brain)
+- [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory)
+- [HyperTune](https://github.com/geeknik/HyperTune)
+- [HaluGard](https://github.com/ppp727276/halugard)
+- [prompt-ops](https://github.com/meta-llama/prompt-ops) — prompt optimization reference
+
+---
 
 ## License
 

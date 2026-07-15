@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["bridge/src/bridge.ts", "bridge/src/types.ts", "bridge/src/signal-converter.ts"],
-  "exclude": ["node_modules", "dist", "bridge/src/seed-runner.ts", "forge", "forge/node_modules", "forge/dist", "mind"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "bridge", "forge", "mind"]
 }
