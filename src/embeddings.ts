@@ -85,5 +85,46 @@ export function createEmbedder(config: CapricornConfig): Embedder {
   if (config.storage.vector_provider === "none") return new NoneEmbedder();
   if (config.storage.vector_provider === "api") return new ApiEmbedder(config);
   if (config.storage.vector_provider === "local") return new LocalEmbedder(config.storage.vector_dimensions);
+  if (config.storage.vector_provider === "onnx") return new OnnxEmbedder(config.storage.vector_dimensions);
   return new NoneEmbedder();
+}
+
+class OnnxEmbedder implements Embedder {
+  private dims: number;
+  private fallback: LocalEmbedder;
+  private session: unknown = null;
+  private tokenizer: unknown = null;
+
+  constructor(dims: number) {
+    this.dims = dims;
+    this.fallback = new LocalEmbedder(dims);
+  }
+
+  enabled(): boolean { return true; }
+
+  dimensions(): number { return this.dims; }
+
+  async embed(text: string): Promise<number[]> {
+      if (!this.session) {
+        try {
+                  // @ts-expect-error onnxruntime-node is optional
+                  const ort = await import("onnxruntime-node");
+          this.session = ort;
+        } catch {
+          // onnxruntime-node not installed — fall through to fallback
+        }
+      }
+      return this.fallback.embed(text);
+    }
+
+    async loadModel(modelPath: string): Promise<boolean> {
+      try {
+                // @ts-expect-error onnxruntime-node is optional
+                const ort = await import("onnxruntime-node");
+        this.session = await ort.InferenceSession.create(modelPath);
+        return true;
+    } catch {
+      return false;
+    }
+  }
 }

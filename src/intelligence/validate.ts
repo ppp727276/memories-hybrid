@@ -15,7 +15,7 @@ export async function validate(input: ValidationInput, embed?: (text: string) =>
   const relevance = await computeRelevance(input.source, input.output, embed);
   const quality = computeQuality(input.output);
 
-  const g2 = await claimVerify(input.output);
+  const g2 = await claimVerify(input.output, input.existingPreferences, embed);
   const g3 = await contradictionCheck(input.output, input.existingPreferences, embed);
   const g4 = await driftDetect(input.output, input.previousPersona, embed);
 
@@ -73,9 +73,15 @@ function computeQuality(text: string): number {
   return 0.9;
 }
 
-async function claimVerify(output: string): Promise<boolean> {
-  // G2: claim verify — placeholder; in production searches SQLite for evidence
-  return output.length > 20;
+async function claimVerify(output: string, preferences: string[], embed?: (text: string) => Promise<number[]>): Promise<boolean> {
+  if (!embed || preferences.length === 0) return output.length > 20;
+  // G2: verify claim against existing evidence in preferences
+  // A claim is "verified" if it's semantically similar to at least one existing preference
+  for (const pref of preferences.slice(0, 10)) {
+    const sim = await semanticSimilarity(output, pref, embed);
+    if (sim > 0.6) return true;
+  }
+  return false;
 }
 
 async function contradictionCheck(output: string, existing: string[], embed?: (text: string) => Promise<number[]>): Promise<boolean> {
