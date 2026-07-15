@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "node:fs";
 import { CapricornStorage } from "../storage/index.ts";
@@ -9,6 +9,7 @@ import type { MemoryInput } from "../types.ts";
 import { createLLMRunner, ForgePipeline, DreamPipeline } from "../intelligence/index.ts";
 import { VaultSync } from "../storage/index.ts";
 import { OsbBridge } from "../bridge/osb.ts";
+import { startMcpServer } from "../mcp/server.ts";
 import { CapricornScheduler } from "../scheduler.ts";
 
 export function makeStorage(config = loadConfig()) {
@@ -157,7 +158,10 @@ async function main(argv: string[]) {
 
   if (command === "setup") {
     const agent = positional[1];
-    const entry = fileURLToPath(new URL("../mcp/server.ts", import.meta.url));
+    const entry = resolve(dirname(fileURLToPath(import.meta.url)), "..", "mcp", "server.ts");
+    const isBinary = process.execPath.endsWith(".exe") || process.argv[0]?.endsWith(".exe");
+    const mcpCommand = isBinary ? process.execPath : "bun";
+    const mcpArgs = isBinary ? ["mcp"] : [entry];
     const agents: Record<string, { path: string; transform?: (cfg: object) => object }> = {
       hermes: { path: join(homedir(), ".hermes", "mcp.json") },
       claude: { path: join(homedir(), ".claude", "mcp.json") },
@@ -172,13 +176,13 @@ async function main(argv: string[]) {
       renameSync(path, `${path}.bak.${Date.now()}`);
     }
     const config = {
-      mcpServers: {
-        capricorn: {
-          command: "bun",
-          args: [entry],
-        },
-      },
-    };
+          mcpServers: {
+            capricorn: {
+              command: mcpCommand,
+              args: mcpArgs,
+            },
+          },
+        };
     writeFileSync(path, JSON.stringify(config, null, 2));
     console.log(JSON.stringify({ status: "configured", agent, path }, null, 2));
     return;
@@ -393,14 +397,19 @@ async function main(argv: string[]) {
       }
 
       if (command === "forget-older") {
-        const days = Number(positional[1] ?? 90);
-        if (Number.isNaN(days) || days < 1) throw new Error("days must be a positive number");
-        const storage = makeStorage();
-        const count = storage.memory.forgetOlderThan(days);
-        console.log(JSON.stringify({ status: "done", deleted: count, older_than_days: days }, null, 2));
-        storage.close();
-        return;
-      }
+              const days = Number(positional[1] ?? 90);
+              if (Number.isNaN(days) || days < 1) throw new Error("days must be a positive number");
+              const storage = makeStorage();
+              const count = storage.memory.forgetOlderThan(days);
+              console.log(JSON.stringify({ status: "done", deleted: count, older_than_days: days }, null, 2));
+              storage.close();
+              return;
+            }
+
+            if (command === "mcp") {
+              startMcpServer();
+              return;
+            }
 
   console.log(`Usage: capricorn <command> [options]
 Commands:
