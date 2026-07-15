@@ -319,7 +319,7 @@ export class MemoryStore {
     }));
   }
 
-  updateReviewStatus(id: string, status: "approved" | "rejected"): void {
+  updateReviewStatus(id: string, status: string): void {
     runSql(this.db, `UPDATE review_queue SET status = ?, reviewed_at = ? WHERE id = ?`, status, Date.now(), id);
   }
 

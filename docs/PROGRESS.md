@@ -99,10 +99,10 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 - `src/storage/sync.ts` — `VaultSync` two-way sync between vault markdown and SQLite.
 - `src/intelligence/index.ts` — public exports.
 - `src/types.ts` — added `Insight`, `Preference`, `PreferenceEvidence`, `Persona`, `ValidationResult`, `SourceType`.
-- `src/storage/db.ts` — migration 002: `enrichment_state` table + `source_type`/`source_weight` columns on `preference_evidence`.
-- `src/storage/memory.ts` — enrichment helpers: unprocessed memory queue, insight/preference/evidence/persona CRUD.
-- `src/cli/index.ts` — added `bridge`, `dream`, `sync` commands.
-- `src/mcp/tools.ts` / `tool-defs.ts` — added `capricorn.bridge`, `capricorn.dream`, `capricorn.sync` tools.
+- `src/storage/db.ts` — migration 002: `enrichment_state` table + `source_type`/`source_weight` columns on `preference_evidence` + `review_queue` table for validation-layer holdbacks.
+- `src/storage/memory.ts` — enrichment helpers: unprocessed memory queue, insight/preference/evidence/persona CRUD, review queue CRUD.
+- `src/cli/index.ts` — added `bridge`, `dream`, `sync`, and `review` commands.
+- `src/mcp/tools.ts` / `tool-defs.ts` — added `capricorn.bridge`, `capricorn.dream`, `capricorn.sync`, and `capricorn.review` tools.
 - Tests: `src/intelligence/confidence.test.ts`, `src/storage/sync.test.ts`, `src/intelligence/forge.test.ts`, `src/intelligence/dream.test.ts`, `src/intelligence/validate.test.ts`.
 
 ### Verification

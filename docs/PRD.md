@@ -57,7 +57,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 
 - [x] Forge pipeline port (L1→L3 from v1)
 - [x] Dream port (preference compounding)
-- [x] Validation layer (HyperTune + HaluGard G2-G4)
+- [x] Validation layer (HyperTune + HaluGard G2-G4) with `review_queue` for human review
 - [x] Confidence scoring with source_weight
 - [x] Two-way sync vault ↔ SQLite
 - [x] Cron scheduler daemon (`capricorn cron`)

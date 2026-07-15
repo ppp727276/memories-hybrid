@@ -346,6 +346,31 @@ async function main(argv: string[]) {
     return;
   }
 
+  if (command === "review") {
+    const storage = makeStorage();
+    const sub = positional[1] ?? "list";
+    if (sub === "list") {
+      const status = (args.status as string) ?? null;
+      const limit = Number(args.limit ?? 100);
+      const items = storage.memory.getReviewQueue(status, limit);
+      console.log(JSON.stringify({ status: "review_list", count: items.length, items }, null, 2));
+    } else if (sub === "resolve") {
+      const id = positional[2];
+      if (!id) throw new Error("id required");
+      storage.memory.updateReviewStatus(id, "resolved");
+      console.log(JSON.stringify({ status: "review_resolved", id }, null, 2));
+    } else if (sub === "dismiss") {
+      const id = positional[2];
+      if (!id) throw new Error("id required");
+      storage.memory.updateReviewStatus(id, "dismissed");
+      console.log(JSON.stringify({ status: "review_dismissed", id }, null, 2));
+    } else {
+      console.log(JSON.stringify({ error: `unknown review subcommand: ${sub}` }, null, 2));
+    }
+    storage.close();
+    return;
+  }
+
   console.log(`Usage: capricorn <command> [options]
 Commands:
   init
@@ -367,7 +392,8 @@ Commands:
   benchmark
   conflicts
   relations <id>
-  prompt-ops <list|report|create|duel|record> [--task context]`);
+  prompt-ops <list|report|create|duel|record> [--task context]
+  review <list|resolve|dismiss> [id] [--status pending|resolved|dismissed] [--limit n]`);
 }
 
 

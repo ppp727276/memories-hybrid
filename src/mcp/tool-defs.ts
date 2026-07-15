@@ -186,4 +186,18 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
   },
+  {
+    name: "capricorn.review",
+    description: "List, resolve, or dismiss review queue items from the validation layer",
+    parameters: {
+      type: "object",
+      required: [],
+      properties: {
+        sub: { type: "string", enum: ["list", "resolve", "dismiss"], default: "list" },
+        id: { type: "string" },
+        status: { type: "string", enum: ["pending", "resolved", "dismissed"], description: "Filter list by status" },
+        limit: { type: "integer", default: 100 },
+      },
+    },
+  },
 ]

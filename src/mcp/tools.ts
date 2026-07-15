@@ -201,5 +201,28 @@ export async function handleTool(
     return { status: "bridge_osb_complete", result };
   }
 
+  if (method === "capricorn.review") {
+    const sub = String(params.sub ?? "list");
+    if (sub === "list") {
+      const status = params.status ? String(params.status) : null;
+      const limit = Number(params.limit ?? 100);
+      const items = storage.memory.getReviewQueue(status, limit);
+      return { status: "review_list", count: items.length, items };
+    }
+    if (sub === "resolve") {
+      const id = String(params.id ?? "");
+      if (!id) throw new Error("id required");
+      storage.memory.updateReviewStatus(id, "resolved");
+      return { status: "review_resolved", id };
+    }
+    if (sub === "dismiss") {
+      const id = String(params.id ?? "");
+      if (!id) throw new Error("id required");
+      storage.memory.updateReviewStatus(id, "dismissed");
+      return { status: "review_dismissed", id };
+    }
+    throw new Error(`unknown review subcommand: ${sub}`);
+  }
+
   throw new Error(`unknown method: ${method}`);
 }
