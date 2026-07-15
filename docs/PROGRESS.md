@@ -329,3 +329,37 @@ Fix 10 P1 + 2 P2 findings from REVIEW.md audit (2026-07-15).
 ### Commits
 
 - `9e3ff63` — `fix: P1/P2 audit findings — logging, DRY, data integrity, UX`
+
+---
+
+## Phase 7 — Production Readiness (DONE)
+
+Phase 7 delivers observability, data integrity, lifecycle management, ONNX embedding, real validation, and integration tests.
+
+### Deliverables
+
+- `src/utils/logger.ts` — structured JSONL logger (`~/.capricorn/logs/capricorn.log`), 4 levels (debug/info/warn/error), dual output (file + stderr)
+- `src/health.ts` — `checkHealth()`: DB, vault, LLM, embedding, disk size. Returns `healthy | degraded | unhealthy` with per-component status.
+- `src/cli/index.ts` — new commands: `health`, `archive <id>`, `forget-older [days]`
+- `src/mcp/tools.ts` — `capricorn.health` MCP tool
+- `src/mcp/tool-defs.ts` — health tool definition
+- `src/storage/db.ts` — migrations 7 (cron_state), 8 (vault_sync_state), 9 (memories_archive + ttl)
+- `src/storage/memory.ts` — new methods: `archiveMemory`, `forgetOlderThan`, `getStaleMemories`, `markVaultSynced`, `getUnsyncedMemories`, `getJobState`, `saveJobState`, `getEnrichmentQueueSize`, `getFailedCount`, `getLastBridgeRun`, `getLastDreamRun`
+- `src/storage/sync.ts` — `exportToVault()` now uses `getUnsyncedMemories()` instead of `getUnprocessedMemories()`, fixing P1 #9 semantic mismatch
+- `src/storage/index.ts` — `remember()` marks vault synced; `stats()` extended with enrichment_queue, failed_enrichments, last_bridge, last_dream
+- `src/scheduler.ts` — persistent cron via `saveJobState()` on each run
+- `src/embeddings.ts` — `OnnxEmbedder` with optional `onnxruntime-node` + local fallback; `vector_provider: "onnx"` support
+- `src/intelligence/validate.ts` — G2 claim verify upgraded from `output.length > 20` to semantic similarity against existing preferences (0.6 threshold)
+- `tests/integration/pipeline.test.ts` — 7 E2E tests: remember→recall→forget, vault sync, stats, lifecycle, cron state, logger
+
+### Verification
+
+- `bun run typecheck` — pass
+- `bun test` — 114 pass, 0 fail
+- `bun run build` — pass
+
+### Commits
+
+- `efab221` — `feat: Phase 7 — observability, persistence, lifecycle (items 1-6)`
+- `7f5510e` — `feat: Phase 7 — ONNX embedding + real validation (items 8-9)`
+- `2376847` — `feat: Phase 7 — integration tests (item 7)`
