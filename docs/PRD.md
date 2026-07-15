@@ -78,6 +78,15 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [x] Build eval datasets from session logs and labeled outputs (eval_cases table + CLI/MCP capture)
 - [x] Offline prompt optimization pipeline (dueling bandits / Thompson sampling)
 
+### P5 — Enhancement (Phase 6) — OSB Bridge Integration
+
+- [x] Ingest signals from `Brain/inbox/*.md` with frontmatter YAML parsing
+- [x] MD5-based checkpoint/idempotency per signal
+- [x] `capricorn bridge-osb` one-shot command for Hermes cron
+- [x] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
+- [x] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
+- [x] Smoke test: signal → enrichment → persona written
+
 ---
 
 ## Non-Goals

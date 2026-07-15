@@ -6,7 +6,8 @@ import { existsSync, mkdirSync, renameSync, writeFileSync, readFileSync } from "
 import { CapricornStorage } from "../storage/index.ts";
 import { loadConfig, saveConfig, expandPath, DEFAULT_CONFIG } from "../config.ts";
 import type { MemoryInput } from "../types.ts";
-import { createLLMRunner, ForgePipeline, DreamPipeline, VaultSync } from "../intelligence/index.ts";
+import { createLLMRunner, ForgePipeline, DreamPipeline } from "../intelligence/index.ts";
+import { VaultSync } from "../storage/index.ts";
 import { OsbBridge } from "../bridge/osb.ts";
 import { CapricornScheduler } from "../scheduler.ts";
 

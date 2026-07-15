@@ -3,12 +3,15 @@ import { join } from "node:path";
 import type { CapricornStorage } from "../storage/index.ts";
 import type { Memory, SourceType } from "../types.ts";
 import { computeConfidenceDelta, clampConfidence } from "./confidence.ts";
+import { validate, decide } from "./validate.ts";
 
 export interface DreamResult {
   processed: number;
   promoted: number;
   retired: number;
   created: number;
+  reviewQueue: number;
+  warnings: number;
 }
 
 export class DreamPipeline {
@@ -21,6 +24,8 @@ export class DreamPipeline {
     let promoted = 0;
     let retired = 0;
     let created = 0;
+    let reviewQueue = 0;
+    let warnings = 0;
 
     for (const signal of signals) {
       const match = await this.findMatch(signal, prefs);
@@ -28,8 +33,15 @@ export class DreamPipeline {
         this.applyEvidence(match, signal);
         processed++;
       } else {
-        this.createTrial(signal);
-        created++;
+        const decision = await this.gate(signal.content);
+        if (decision === "auto-merge" || decision === "merge-warning") {
+          this.createTrial(signal);
+          created++;
+          if (decision === "merge-warning") warnings++;
+        } else {
+          this.storage.memory.addReviewQueue("preference", signal.content, signal.id, 0, ["review_queue"]);
+          reviewQueue++;
+        }
         prefs = this.storage.memory.getAllPreferences();
       }
     }
@@ -62,7 +74,13 @@ export class DreamPipeline {
     }
 
     this.regenerateActiveMd(profile);
-    return { processed, promoted, retired, created };
+    return { processed, promoted, retired, created, reviewQueue, warnings };
+  }
+
+  private async gate(source: string): Promise<"auto-merge" | "merge-warning" | "review-queue"> {
+    const existing = this.storage.memory.getAllPreferences().map((p) => p.body);
+    const result = await validate({ source, output: source, existingPreferences: existing });
+    return decide(result).decision;
   }
 
   private scanInbox(): Memory[] {

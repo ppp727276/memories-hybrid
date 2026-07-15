@@ -127,7 +127,7 @@ export async function handleTool(
   }
 
   if (method === "capricorn.sync") {
-    const { VaultSync } = await import("../intelligence/index.ts");
+    const { VaultSync } = await import("../storage/index.ts");
     const sync = new VaultSync(storage);
     const result = sync.sync();
     return { status: "sync_complete", result };

@@ -1,6 +1,8 @@
 import type { ValidationResult } from "../types.ts";
 import { cosineSimilarity } from "./similarity.ts";
 
+export type Decision = "auto-merge" | "merge-warning" | "review-queue";
+
 export interface ValidationInput {
   source: string;
   output: string;
@@ -29,6 +31,24 @@ export async function validate(input: ValidationInput, embed?: (text: string) =>
     hyper_tune: { coherence, relevance, quality },
     halugard: { g2_claim_verify: g2, g3_contradiction: g3, g4_drift_detect: g4 },
   };
+}
+
+export function decide(result: ValidationResult, thresholds?: { autoMerge: number; reviewQueue: number }): { decision: Decision; warnings: string[] } {
+  const { autoMerge = 0.7, reviewQueue = 0.4 } = thresholds ?? {};
+  const warnings: string[] = [];
+  if (result.score >= autoMerge && result.flags.length === 0) {
+    return { decision: "auto-merge", warnings };
+  }
+  if (result.score >= autoMerge && result.flags.length > 0) {
+    warnings.push(...result.flags);
+    return { decision: "merge-warning", warnings };
+  }
+  if (result.score >= reviewQueue) {
+    warnings.push(...result.flags, "low_score");
+    return { decision: "merge-warning", warnings };
+  }
+  warnings.push(...result.flags, "low_score");
+  return { decision: "review-queue", warnings };
 }
 
 async function computeCoherence(text: string, embed?: (text: string) => Promise<number[]>): Promise<number> {

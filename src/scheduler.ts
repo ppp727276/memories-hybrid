@@ -3,7 +3,7 @@ import type { CapricornConfig } from "./types.ts";
 import { createLLMRunner } from "./intelligence/llm.ts";
 import { ForgePipeline } from "./intelligence/forge.ts";
 import { DreamPipeline } from "./intelligence/dream.ts";
-import { VaultSync } from "./intelligence/sync.ts";
+import { VaultSync } from "./storage/sync.ts";
 
 export function matchesCronPart(value: number, part: string, max: number): boolean {
   if (part === "*") {

@@ -9,6 +9,7 @@ import type { CapricornConfig } from "../types.ts";
 import { PromptOptimizer } from "../intelligence/prompt-ops.ts";
 
 export { MemoryStore, VaultWriter };
+export { VaultSync } from "./sync.ts";
 export type { MemoryInput, SearchResult };
 
 export class CapricornStorage {

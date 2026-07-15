@@ -151,8 +151,13 @@ Bridge cron (6h):
 
   threshold:
     score ≥ 0.7 + no flags → auto-merge
-    score 0.4-0.7 → merge with warning
-    score < 0.4 OR flags → human review
+    score 0.4-0.7 OR any flag → merge-warning (stored with warning metadata)
+    score < 0.4 → review-queue (not stored; queued for human review)
+
+  decision: Decision type = "auto-merge" | "merge-warning" | "review-queue"
+  - auto-merge: written to main storage
+  - merge-warning: written to main storage, flagged in metadata
+  - review-queue: routed to `review_queue` table, not merged
 ```
 
 **Adopted from:**

@@ -290,6 +290,43 @@ export class MemoryStore {
     );
   }
 
+  addReviewQueue(kind: string, content: string, source: string, score: number, warnings: string[]): string {
+    const id = generateId("rev");
+    runSql(
+      this.db,
+      `INSERT INTO review_queue (id, kind, content, source, score, warnings, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      kind,
+      content,
+      source,
+      score,
+      JSON.stringify(warnings),
+      "pending",
+      Date.now(),
+    );
+    return id;
+  }
+
+  getReviewQueue(status: string | null = null, limit = 100): { id: string; kind: string; content: string; source: string; score: number; warnings: string[]; status: string; created_at: number }[] {
+    const sql = status
+      ? `SELECT * FROM review_queue WHERE status = ? ORDER BY created_at DESC LIMIT ?`
+      : `SELECT * FROM review_queue ORDER BY created_at DESC LIMIT ?`;
+    const params = status ? [status, limit] : [limit];
+    return queryAll<{ id: string; kind: string; content: string; source: string; score: number; warnings: string; status: string; created_at: number }>(this.db, sql, ...params).map((row) => ({
+      ...row,
+      warnings: parseTags(row.warnings),
+    }));
+  }
+
+  updateReviewStatus(id: string, status: "approved" | "rejected"): void {
+    runSql(this.db, `UPDATE review_queue SET status = ?, reviewed_at = ? WHERE id = ?`, status, Date.now(), id);
+  }
+
+  deleteReviewQueue(id: string): void {
+    runSql(this.db, `DELETE FROM review_queue WHERE id = ?`, id);
+  }
+
   private ftsSearch(queryText: string, limit: number, project: string | null): MemoryRow[] {
     const projectClause = project ? "AND m.project = ?" : "";
     const match = `"${quoteFts5(queryText)}"*`;

@@ -185,6 +185,25 @@ CREATE TABLE IF NOT EXISTS osb_signal_checkpoints (
 CREATE INDEX IF NOT EXISTS idx_osb_signal_checkpoints_path ON osb_signal_checkpoints(file_path);
 CREATE INDEX IF NOT EXISTS idx_osb_signal_checkpoints_status ON osb_signal_checkpoints(status);`,
   },
+  {
+    id: 5,
+    name: "validation gate",
+    sql: `-- Review queue for rejected enrichment outputs
+CREATE TABLE IF NOT EXISTS review_queue (
+  id          TEXT PRIMARY KEY,
+  kind        TEXT NOT NULL, -- insight, persona, preference
+  content     TEXT NOT NULL,
+  source      TEXT NOT NULL,
+  score       REAL NOT NULL DEFAULT 0.0,
+  warnings    TEXT DEFAULT '[]',
+  status      TEXT NOT NULL DEFAULT 'pending',
+  created_at  INTEGER NOT NULL,
+  reviewed_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_queue_status ON review_queue(status);
+CREATE INDEX IF NOT EXISTS idx_review_queue_kind ON review_queue(kind);`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {

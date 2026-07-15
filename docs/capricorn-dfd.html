@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capricorn v2 — Data Flow Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --green: #00ff41; --green-dim: #33ff88; --bg: #0a0a0a; --panel: #111; --orange: #ffaa41; }
+    body { background: var(--bg); color: var(--green); font-family: 'Courier New', Courier, monospace; padding: 2rem; line-height: 1.5; }
+    h1, h2, h3 { color: var(--green); }
+    h1 { border-bottom: 1px solid var(--green); padding-bottom: 0.5rem; }
+    a { color: var(--green-dim); }
+    .mermaid { background: var(--panel); padding: 1rem; border: 1px solid var(--green); margin: 1rem 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.85rem; }
+    th, td { border: 1px solid var(--green); padding: 0.5rem; text-align: left; vertical-align: top; }
+    th { background: var(--panel); }
+    .note { color: #aaa; font-size: 0.85rem; }
+    code { background: #222; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Capricorn v2 — Data Flow Diagram</h1>
+  <p class="note">Source of truth: <code>src/</code>. Last updated: 2026-07-15.</p>
+
+  <h2>Level 0 — Context Diagram</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef ext fill:#003300,stroke:#00ff41,color:#00ff41
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      A[Agent / MCP Client]
+      U[CLI User]
+      C[Capricorn v2]
+      V[(OSB Vault)]
+      L[(LLM / Embedding API)]
+      S[(Scheduler)]
+
+      A <-->|F1 / F14| C
+      U <-->|F2 / F4| C
+      V <-->|F8 / F12| C
+      L <-->|F9 / F10| C
+      S -->|F15| C
+  </div>
+
+  <h3>Level 0 Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Explanation</th></tr>
+    <tr><td>1</td><td>Agent ↔ Capricorn</td><td>Agent kirim input (remember/recall/context) dan terima capricorn.context.</td></tr>
+    <tr><td>2</td><td>CLI User ↔ Capricorn</td><td>User jalankan command capricorn dan terima output terminal.</td></tr>
+    <tr><td>8</td><td>OSB Vault ↔ Capricorn</td><td>Capricorn baca sinyal mentah dan tulis persona/preference/active.md.</td></tr>
+    <tr><td>9</td><td>LLM/Embedding API ↔ Capricorn</td><td>Request embedding dan inference untuk enrichment.</td></tr>
+    <tr><td>15</td><td>Scheduler → Capricorn</td><td>Cron trigger untuk bridge/dream/sync.</td></tr>
+  </table>
+
+  <h2>Level 1 — DFD Proses Utama</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef ext fill:#003300,stroke:#00ff41,color:#00ff41
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      A[Agent / MCP Client]
+      U[CLI User]
+      O[OSB Vault]
+      API[(LLM / Embedding API)]
+      CRON[(Scheduler)]
+
+      P1[P1.0 Accept Input]
+      P2[P2.0 Storage Engine]
+      P3[P3.0 Intelligence Engine]
+      P4[P4.0 Validation Layer]
+      P5[P5.0 OSB Bridge]
+
+      D1[(D1 SQLite)]
+      D2[(D2 Vault Markdown)]
+      D3[(D3 Config)]
+
+      A <-->|1 / 14| P1
+      U <-->|2 / 4| P1
+      D3 -->|3| P1
+      P1 -->|4| P2
+      P2 <-->|5| D1
+      P2 <-->|6| D2
+      P2 -->|7| P3
+      O <-->|8 / 11| P5
+      P5 -->|9| P2
+      P3 <-->|10| API
+      P3 -->|12| P4
+      P4 -->|13| P2
+      CRON -->|15| P3
+      CRON -->|16| P5
+      P1 -->|17| A
+  </div>
+
+  <h3>Level 1 Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Dari</th><th>Ke</th><th>Isi</th></tr>
+    <tr><td>1</td><td>Agent → Accept Input</td><td>Agent / MCP Client</td><td>P1.0</td><td>Memory input, recall query, context request</td></tr>
+    <tr><td>2</td><td>CLI User → Accept Input</td><td>CLI User</td><td>P1.0</td><td>CLI command</td></tr>
+    <tr><td>3</td><td>Config → Accept Input</td><td>D3 Config</td><td>P1.0</td><td>vault/db path, LLM/embedding config, cron</td></tr>
+    <tr><td>4</td><td>Validated Request → Storage Engine</td><td>P1.0</td><td>P2.0</td><td>Validated request + config</td></tr>
+    <tr><td>5</td><td>Storage Engine ↔ SQLite</td><td>P2.0</td><td>D1</td><td>CRUD memories, insights, preferences, personas</td></tr>
+    <tr><td>6</td><td>Storage Engine ↔ Vault Markdown</td><td>P2.0</td><td>D2</td><td>Write-through signals; read human edits</td></tr>
+    <tr><td>7</td><td>Unprocessed Signals → Intelligence</td><td>P2.0</td><td>P3.0</td><td>Batch memories belum di-enrich</td></tr>
+    <tr><td>8</td><td>OSB Vault → OSB Bridge</td><td>OSB Vault</td><td>P5.0</td><td>Raw signals sig-*.md</td></tr>
+    <tr><td>9</td><td>OSB Bridge → Storage Engine</td><td>P5.0</td><td>P2.0</td><td>Parsed signal untuk remember</td></tr>
+    <tr><td>10</td><td>Intelligence ↔ LLM/Embedding API</td><td>P3.0</td><td>API</td><td>Embedding/inference requests</td></tr>
+    <tr><td>11</td><td>OSB Bridge → OSB Vault</td><td>P5.0</td><td>OSB Vault</td><td>Updated persona-core.md</td></tr>
+    <tr><td>12</td><td>Draft Output → Validation</td><td>P3.0</td><td>P4.0</td><td>L1-L3 insights, persona draft</td></tr>
+    <tr><td>13</td><td>Validated Results → Storage Engine</td><td>P4.0</td><td>P2.0</td><td>Validated insights + merge decision</td></tr>
+    <tr><td>14</td><td>Context/Results → Agent</td><td>P1.0</td><td>Agent</td><td>capricorn.context atau recall/search result</td></tr>
+    <tr><td>15</td><td>Scheduler → Intelligence</td><td>Scheduler</td><td>P3.0</td><td>Cron trigger untuk dream/forge</td></tr>
+    <tr><td>16</td><td>Scheduler → OSB Bridge</td><td>Scheduler</td><td>P5.0</td><td>Cron trigger untuk bridge</td></tr>
+  </table>
+
+  <h2>Level 2 — Storage Engine</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      P1[P1.0 Accept Input]
+      P2_1[Parse & Validate]
+      P2_2[Generate Embedding]
+      P2_3[Write Memory]
+      P2_4[Search]
+      P2_5[Write Vault]
+      P2_6[Two-Way Sync]
+      P2_7[Context Builder]
+
+      D_SQL[(memories)]
+      D_FTS[(memories_fts)]
+      D_VEC[(memories_vec)]
+      D_VAULT[(Vault)]
+
+      API[(Embedding API)]
+
+      P1 -->|1| P2_1
+      P2_1 -->|2| P2_2
+      P2_2 <-->|3| API
+      P2_2 -->|4| P2_3
+      P2_3 -->|5| D_SQL
+      P2_3 -->|6| D_FTS
+      P2_3 -->|7| D_VEC
+      P2_3 -->|8| P2_5
+      P2_5 -->|9| D_VAULT
+      P1 -->|10| P2_4
+      D_SQL -->|11| P2_4
+      D_FTS -->|12| P2_4
+      D_VEC -->|13| P2_4
+      D_VAULT -->|14| P2_6
+      P2_6 -->|15| D_SQL
+      P2_6 -->|16| D_VAULT
+      P2_4 -->|17| P2_7
+      D_SQL -->|18| P2_7
+      P2_7 -->|19| P1
+  </div>
+
+  <h3>Level 2 Storage Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Dari</th><th>Ke</th><th>Isi</th></tr>
+    <tr><td>1</td><td>Input → Parse & Validate</td><td>P1.0</td><td>Parse & Validate</td><td>MemoryInput atau query</td></tr>
+    <tr><td>2</td><td>Content → Generate Embedding</td><td>Parse & Validate</td><td>Generate Embedding</td><td>Validated content</td></tr>
+    <tr><td>3</td><td>Embedding API ↔ Generate Embedding</td><td>Generate Embedding</td><td>Embedding API</td><td>Request/response vector</td></tr>
+    <tr><td>4</td><td>Embedding → Write Memory</td><td>Generate Embedding</td><td>Write Memory</td><td>Vector opsional (bisa none)</td></tr>
+    <tr><td>5</td><td>Write Memory → memories</td><td>Write Memory</td><td>memories</td><td>INSERT memory record</td></tr>
+    <tr><td>6</td><td>Trigger FTS5 index</td><td>Write Memory</td><td>memories_fts</td><td>Update trigram index</td></tr>
+    <tr><td>7</td><td>Store vector</td><td>Write Memory</td><td>memories_vec</td><td>INSERT embedding blob</td></tr>
+    <tr><td>8</td><td>Write Memory → Write Vault</td><td>Write Memory</td><td>Write Vault</td><td>Memory untuk di-tulis ke vault</td></tr>
+    <tr><td>9</td><td>Write Vault → Vault</td><td>Write Vault</td><td>Vault</td><td>Sig-*.md baru</td></tr>
+    <tr><td>10</td><td>Recall Query → Search</td><td>P1.0</td><td>Search</td><td>Recall/search query</td></tr>
+    <tr><td>11</td><td>Memories → Search</td><td>memories</td><td>Search</td><td>Filter metadata</td></tr>
+    <tr><td>12</td><td>Memories_fts → Search</td><td>memories_fts</td><td>Search</td><td>FTS5 matches</td></tr>
+    <tr><td>13</td><td>Memories_vec → Search</td><td>memories_vec</td><td>Search</td><td>Vector similarity</td></tr>
+    <tr><td>14</td><td>Vault → Two-Way Sync</td><td>Vault</td><td>Two-Way Sync</td><td>Mtime/presence comparison</td></tr>
+    <tr><td>15</td><td>Two-Way Sync → memories</td><td>Two-Way Sync</td><td>memories</td><td>Import/export records</td></tr>
+    <tr><td>16</td><td>Two-Way Sync → Vault</td><td>Two-Way Sync</td><td>Vault</td><td>Regenerate sig-*.md / active.md</td></tr>
+    <tr><td>17</td><td>Search → Context Builder</td><td>Search</td><td>Context Builder</td><td>Search results</td></tr>
+    <tr><td>18</td><td>Memories → Context Builder</td><td>memories</td><td>Context Builder</td><td>Confirmed preferences + persona</td></tr>
+    <tr><td>19</td><td>Context Builder → Accept Input</td><td>Context Builder</td><td>P1.0</td><td>capricorn.context block</td></tr>
+  </table>
+
+  <h2>Level 2 — OSB Bridge</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      P5[P5.0 OSB Bridge]
+      P5_1[Ingest Signals]
+      P5_2[Convert Format]
+      P5_3[Remember]
+
+      D_VAULT[(OSB Vault)]
+      D_SQL[(SQLite)]
+
+      D_VAULT -->|1| P5_1
+      P5_1 -->|2| P5_2
+      P5_2 -->|3| P5_3
+      P5_3 -->|4| D_SQL
+      P5_3 -->|5| D_VAULT
+  </div>
+
+  <h3>Level 2 OSB Bridge Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Dari</th><th>Ke</th><th>Isi</th></tr>
+    <tr><td>1</td><td>OSB Vault → Ingest Signals</td><td>OSB Vault</td><td>P5_1</td><td>Sig-*.md files</td></tr>
+    <tr><td>2</td><td>Raw Signal → Convert Format</td><td>P5_1</td><td>P5_2</td><td>Frontmatter + body dari file.md</td></tr>
+    <tr><td>3</td><td>Capricorn MemoryInput → Remember</td><td>P5_2</td><td>P5_3</td><td>MemoryInput dengan project/source mapping</td></tr>
+    <tr><td>4</td><td>Remember → SQLite</td><td>P5_3</td><td>SQLite</td><td>INSERT memory record</td></tr>
+    <tr><td>5</td><td>Remember → Capricorn Vault</td><td>P5_3</td><td>OSB Vault</td><td>Write-through sig-*.md</td></tr>
+  </table>
+
+  <h2>Level 2 — Intelligence Engine</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      P3_1[Load Signals]
+      P3_2[L1 Insight Extract]
+      P3_3[L2 Scene Synthesis]
+      P3_4[L3 Persona Generate]
+      P3_5[Dream Compounding]
+      P3_6[Validation Gate]
+
+      D_MEM[(memories)]
+      D_INS[(insights)]
+      D_PER[(personas)]
+      D_PREF[(preferences)]
+      D_EVID[(preference_evidence)]
+      D_VAULT[(OSB Vault)]
+
+      D_MEM -->|1| P3_1
+      P3_1 -->|2| P3_2
+      P3_2 -->|3| API
+      P3_2 -->|4| D_INS
+      P3_2 -->|5| P3_3
+      P3_3 -->|6| API
+      P3_3 -->|7| D_INS
+      P3_3 -->|8| P3_4
+      P3_4 -->|9| API
+      P3_4 -->|10| D_PER
+      P3_4 -->|11| D_VAULT
+      D_VAULT -->|12| P3_5
+      D_MEM -->|13| P3_5
+      P3_5 -->|14| D_PREF
+      P3_5 -->|15| D_EVID
+      P3_5 -->|16| D_VAULT
+      D_INS -->|17| P3_6
+      D_PER -->|18| P3_6
+      D_PREF -->|19| P3_6
+      P3_6 -->|20| D_MEM
+      P3_6 -->|21| D_INS
+      P3_6 -->|22| D_PER
+      P3_6 -->|23| D_PREF
+      P3_6 -->|24| D_VAULT
+  </div>
+
+  <h3>Level 2 Intelligence Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Dari</th><th>Ke</th><th>Isi</th></tr>
+    <tr><td>1</td><td>Unprocessed memories → Load Signals</td><td>memories</td><td>P3_1</td><td>Batch memories belum di-enrich</td></tr>
+    <tr><td>2</td><td>Load Signals → L1 Insight Extract</td><td>P3_1</td><td>P3_2</td><td>Batch content untuk ekstrak insight</td></tr>
+    <tr><td>3</td><td>L1 Insight Extract ↔ LLM API</td><td>P3_2</td><td>API</td><td>Inference untuk ekstrak insight</td></tr>
+    <tr><td>4</td><td>L1 → insights</td><td>P3_2</td><td>insights</td><td>L1 insights</td></tr>
+    <tr><td>5</td><td>L1 → L2 Scene Synthesis</td><td>P3_2</td><td>P3_3</td><td>L1 insights untuk disintesis</td></tr>
+    <tr><td>6</td><td>L2 Scene Synthesis ↔ LLM API</td><td>P3_3</td><td>API</td><td>Inference untuk scene synthesis</td></tr>
+    <tr><td>7</td><td>L2 → insights</td><td>P3_3</td><td>insights</td><td>L2 scenes</td></tr>
+    <tr><td>8</td><td>L2 → L3 Persona Generate</td><td>P3_3</td><td>P3_4</td><td>L1+L2 untuk persona</td></tr>
+    <tr><td>9</td><td>L3 Persona Generate ↔ LLM API</td><td>P3_4</td><td>API</td><td>Inference untuk persona</td></tr>
+    <tr><td>10</td><td>L3 → personas</td><td>P3_4</td><td>personas</td><td>Draft persona</td></tr>
+    <tr><td>11</td><td>L3 → Vault personas/</td><td>P3_4</td><td>OSB Vault</td><td>Draft persona-core.md</td></tr>
+    <tr><td>12</td><td>OSB inbox → Dream Compounding</td><td>OSB Vault</td><td>P3_5</td><td>Raw signals untuk preference compounding</td></tr>
+    <tr><td>13</td><td>Unprocessed memories → Dream</td><td>memories</td><td>P3_5</td><td>Evidence batch</td></tr>
+    <tr><td>14</td><td>Dream → preferences</td><td>P3_5</td><td>preferences</td><td>Draft preferences</td></tr>
+    <tr><td>15</td><td>Dream → preference_evidence</td><td>P3_5</td><td>preference_evidence</td><td>Trial evidence</td></tr>
+    <tr><td>16</td><td>Dream → Vault</td><td>P3_5</td><td>OSB Vault</td><td>Draft active.md</td></tr>
+    <tr><td>17</td><td>Insights → Validation Gate</td><td>insights</td><td>P3_6</td><td>Draft insights</td></tr>
+    <tr><td>18</td><td>Personas → Validation Gate</td><td>personas</td><td>P3_6</td><td>Draft persona</td></tr>
+    <tr><td>19</td><td>Preferences → Validation Gate</td><td>preferences</td><td>P3_6</td><td>Draft preferences</td></tr>
+    <tr><td>20</td><td>Validation Gate → memories</td><td>P3_6</td><td>memories</td><td>Update source memory status</td></tr>
+    <tr><td>21</td><td>Validation Gate → insights</td><td>P3_6</td><td>insights</td><td>Validated insights</td></tr>
+    <tr><td>22</td><td>Validation Gate → personas</td><td>P3_6</td><td>personas</td><td>Validated persona</td></tr>
+    <tr><td>23</td><td>Validation Gate → preferences</td><td>P3_6</td><td>preferences</td><td>Validated preferences</td></tr>
+    <tr><td>24</td><td>Validation Gate → Vault</td><td>P3_6</td><td>OSB Vault</td><td>Updated persona-core.md / active.md</td></tr>
+  </table>
+
+  <h2>Level 2 — Validation Layer (0 Token)</h2>
+  <div class="mermaid">
+    flowchart LR
+      classDef proc fill:#001a00,stroke:#00ff41,color:#00ff41
+      classDef store fill:#1a1a00,stroke:#ffaa00,color:#ffaa41
+
+      P4_1[HyperTune]
+      P4_2[G2 Claim Verify]
+      P4_3[G3 Contradiction]
+      P4_4[G4 Drift]
+      P4_5[Decision Gate]
+
+      D_SQL[(SQLite)]
+      D_PREF[(preferences)]
+      D_PER[(personas)]
+
+      I[Intelligence Engine]
+
+      I -->|1| P4_1
+      I -->|2| P4_2
+      I -->|3| P4_3
+      I -->|4| P4_4
+      P4_1 <-->|5| LOCAL
+      P4_2 -->|6| D_SQL
+      P4_3 -->|7| D_PREF
+      P4_4 -->|8| D_PER
+      P4_1 -->|9| P4_5
+      P4_2 -->|10| P4_5
+      P4_3 -->|11| P4_5
+      P4_4 -->|12| P4_5
+      P4_5 -->|13| OUT1[Auto-merge]
+      P4_5 -->|14| OUT2[Merge + Warning]
+      P4_5 -->|15| OUT3[Human Review]
+  </div>
+
+  <h3>Level 2 Validation Flows</h3>
+  <table>
+    <tr><th>#</th><th>Flow</th><th>Dari</th><th>Ke</th><th>Isi</th></tr>
+    <tr><td>1</td><td>Draft → HyperTune</td><td>Intelligence</td><td>P4_1</td><td>Draft insight/persona untuk scoring coherence/relevance/quality</td></tr>
+    <tr><td>2</td><td>Draft → G2 Claim Verify</td><td>Intelligence</td><td>P4_2</td><td>Claim untuk diverifikasi</td></tr>
+    <tr><td>3</td><td>Draft → G3 Contradiction</td><td>Intelligence</td><td>P4_3</td><td>Preference untuk dicek kontradiksi</td></tr>
+    <tr><td>4</td><td>Draft → G4 Drift</td><td>Intelligence</td><td>P4_4</td><td>Persona untuk dicek drift</td></tr>
+    <tr><td>5</td><td>HyperTune ↔ Local Embedding</td><td>P4_1</td><td>LOCAL</td><td>Local vector similarity untuk quality score</td></tr>
+    <tr><td>6</td><td>G2 → SQLite</td><td>P4_2</td><td>D_SQL</td><td>Evidence search untuk claim verify</td></tr>
+    <tr><td>7</td><td>G3 → preferences</td><td>P4_3</td><td>D_PREF</td><td>Compare dengan confirmed preferences</td></tr>
+    <tr><td>8</td><td>G4 → personas</td><td>P4_4</td><td>D_PER</td><td>Compare dengan current persona</td></tr>
+    <tr><td>9</td><td>Quality score → Decision Gate</td><td>P4_1</td><td>P4_5</td><td>Coherence/relevance/quality score</td></tr>
+    <tr><td>10</td><td>Claim flag → Decision Gate</td><td>P4_2</td><td>P4_5</td><td>Verified / unverified / unsupported flag</td></tr>
+    <tr><td>11</td><td>Contradiction flag → Decision Gate</td><td>P4_3</td><td>P4_5</td><td>Conflict flag</td></tr>
+    <tr><td>12</td><td>Drift flag → Decision Gate</td><td>P4_4</td><td>P4_5</td><td>Drift detected / stable flag</td></tr>
+    <tr><td>13</td><td>Auto-merge</td><td>P4_5</td><td>OUT1</td><td>Lolos semua gate → persist</td></tr>
+    <tr><td>14</td><td>Merge + Warning</td><td>P4_5</td><td>OUT2</td><td>Lolos tapi ada warning → persist + catatan warning</td></tr>
+    <tr><td>15</td><td>Human Review</td><td>P4_5</td><td>OUT3</td><td>Gagal gate → masuk antrian review manual</td></tr>
+  </table>
+
+  <h2>Legenda Simbol</h2>
+  <table>
+    <tr><th>Simbol</th><th>Nama</th><th>Arti</th></tr>
+    <tr><td>Persegi panjang</td><td>External Entity</td><td>Actor di luar sistem: Agent, CLI user, OSB vault, LLM API.</td></tr>
+    <tr><td>Lingkaran / bulat</td><td>Process</td><td>Transformasi data: remember, recall, enrich, validate.</td></tr>
+    <tr><td>Silinder / tabung</td><td>Data Store</td><td>Penyimpanan data: SQLite, vault markdown.</td></tr>
+    <tr><td>Silinder ganda</td><td>External Data Store</td><td>Data store eksternal: OSB vault, LLM/embedding API.</td></tr>
+    <tr><td>Panah</td><td>Data Flow</td><td>Arah pergerakan data dengan label.</td></tr>
+  </table>
+
+  <h2>Data Dictionary — Entities</h2>
+  <table>
+    <tr><th>Kode</th><th>Entity</th><th>Deskripsi</th></tr>
+    <tr><td>E1</td><td>Agent / MCP Client</td><td>AI agent atau IDE yang berkomunikasi via MCP stdio/HTTP.</td></tr>
+    <tr><td>E2</td><td>CLI User</td><td>Pengguna manusia yang menjalankan perintah capricorn.</td></tr>
+    <tr><td>E3</td><td>Open Second Brain</td><td>Vault markdown eksternal yang menjadi sumber/sink sinyal.</td></tr>
+    <tr><td>E4</td><td>LLM / Embedding API</td><td>DeepSeek / OpenAI / OmniRoute untuk inference dan embeddings.</td></tr>
+  </table>
+
+  <h2>Data Dictionary — Proses</h2>
+  <table>
+    <tr><th>Kode</th><th>Proses</th><th>Deskripsi</th><th>Trigger</th></tr>
+    <tr><td>P1.0</td><td>Accept Input</td><td>Menerima input dari CLI/MCP dan memvalidasi command/args.</td><td>CLI / MCP request</td></tr>
+    <tr><td>P2.0</td><td>Storage Engine</td><td>Menyimpan dan mengambil memori dari SQLite + vault.</td><td>Remember/recall/search</td></tr>
+    <tr><td>P3.0</td><td>Intelligence Engine</td><td>Forge L1-L3 enrichment dan Dream compounding.</td><td>Cron 6h / hourly</td></tr>
+    <tr><td>P4.0</td><td>Validation Layer</td><td>HyperTune + HaluGard G2-G4 scoring tanpa LLM call.</td><td>Setelah Forge/Dream</td></tr>
+    <tr><td>P5.0</td><td>OSB Bridge</td><td>Ingest sig-*.md dari OSB vault ke SQLite.</td><td>Cron / manual CLI</td></tr>
+  </table>
+
+  <h2>Data Dictionary — Data Stores</h2>
+  <table>
+    <tr><th>Kode</th><th>Data Store</th><th>Isi</th></tr>
+    <tr><td>D1</td><td>SQLite</td><td>memories, memories_fts, memories_vec, insights, preferences, preference_evidence, personas, sessions.</td></tr>
+    <tr><td>D2</td><td>Vault Markdown</td><td>inbox/, preferences/, personas/, active.md, log/, pinned.md.</td></tr>
+    <tr><td>D3</td><td>Config</td><td>capricorn.config.json, _brain.yaml.</td></tr>
+  </table>
+
+  <h2>Data Dictionary — Data Flows</h2>
+  <table>
+    <tr><th>Flow</th><th>Source</th><th>Destination</th><th>Data</th></tr>
+    <tr><td>F1</td><td>Agent / MCP Client</td><td>Accept Input</td><td>Memory input, recall query, context request</td></tr>
+    <tr><td>F2</td><td>CLI User</td><td>Accept Input</td><td>CLI command</td></tr>
+    <tr><td>F3</td><td>Config</td><td>Accept Input</td><td>Vault/db path, LLM/embedding config, cron schedule</td></tr>
+    <tr><td>F4</td><td>Accept Input</td><td>Storage Engine</td><td>Validated request + config</td></tr>
+    <tr><td>F5</td><td>Storage Engine</td><td>SQLite</td><td>CRUD memories, insights, preferences, personas</td></tr>
+    <tr><td>F6</td><td>Storage Engine</td><td>Vault Markdown</td><td>Write-through signals; read human edits</td></tr>
+    <tr><td>F7</td><td>Storage Engine</td><td>Intelligence Engine</td><td>Unprocessed memory batch</td></tr>
+    <tr><td>F8</td><td>OSB Vault</td><td>OSB Bridge</td><td>Raw signals sig-*.md</td></tr>
+    <tr><td>F9</td><td>OSB Bridge</td><td>Storage Engine</td><td>Parsed signal untuk remember</td></tr>
+    <tr><td>F10</td><td>Intelligence Engine</td><td>LLM / Embedding API</td><td>Embedding/inference requests</td></tr>
+    <tr><td>F11</td><td>Validation Layer</td><td>Storage Engine</td><td>Validated insights + merge decision for SQLite</td></tr>
+    <tr><td>F12</td><td>Validation Layer</td><td>OSB Vault</td><td>Updated persona-core.md, active.md</td></tr>
+    <tr><td>F13</td><td>Storage Engine</td><td>Context Output</td><td>Relevant memories + confirmed preferences + persona summary</td></tr>
+    <tr><td>F14</td><td>Context Output</td><td>Agent / MCP Client</td><td>Capricorn.context block atau hasil recall/search</td></tr>
+    <tr><td>F15</td><td>Scheduler</td><td>Intelligence Engine</td><td>Cron trigger dream/forge</td></tr>
+    <tr><td>F16</td><td>Scheduler</td><td>OSB Bridge</td><td>Cron trigger bridge</td></tr>
+  </table>
+
+  <script>
+    mermaid.initialize({ theme: 'dark', startOnLoad: true });
+  </script>
+</body>
+</html>

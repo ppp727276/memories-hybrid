@@ -96,19 +96,19 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 - `src/intelligence/confidence.ts` — `source_weight`, decay, confidence delta, clamping.
 - `src/intelligence/validate.ts` — HyperTune (coherence/relevance/quality) + HaluGard G2-G4 (claim verify, contradiction, drift) validation layer.
 - `src/intelligence/similarity.ts` — shared cosine similarity helper.
-- `src/intelligence/sync.ts` — `VaultSync` two-way sync between vault markdown and SQLite.
+- `src/storage/sync.ts` — `VaultSync` two-way sync between vault markdown and SQLite.
 - `src/intelligence/index.ts` — public exports.
 - `src/types.ts` — added `Insight`, `Preference`, `PreferenceEvidence`, `Persona`, `ValidationResult`, `SourceType`.
 - `src/storage/db.ts` — migration 002: `enrichment_state` table + `source_type`/`source_weight` columns on `preference_evidence`.
 - `src/storage/memory.ts` — enrichment helpers: unprocessed memory queue, insight/preference/evidence/persona CRUD.
 - `src/cli/index.ts` — added `bridge`, `dream`, `sync` commands.
 - `src/mcp/tools.ts` / `tool-defs.ts` — added `capricorn.bridge`, `capricorn.dream`, `capricorn.sync` tools.
-- Tests: `src/intelligence/confidence.test.ts`, `src/intelligence/sync.test.ts`, `src/intelligence/forge.test.ts`, `src/intelligence/dream.test.ts`, `src/intelligence/validate.test.ts`.
+- Tests: `src/intelligence/confidence.test.ts`, `src/storage/sync.test.ts`, `src/intelligence/forge.test.ts`, `src/intelligence/dream.test.ts`, `src/intelligence/validate.test.ts`.
 
 ### Verification
 
 - `bun run typecheck` — pass.
-- `bun run test` — 106 pass, 0 fail.
+- `bun run test` — 107 pass, 0 fail.
 - `bun run build` — pass.
 - `bun run smoke:phase3` — pass (automated CLI smoke: bridge → dream → sync).
 
@@ -116,7 +116,8 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 
 - Forge enrichment is disabled when `CAPRICORN_LLM_BASE_URL` is unset and `intelligence.forge.llm_provider` is `"none"`; the pipeline marks unprocessed memories as skipped without crashing.
 - Validation layer currently uses heuristic similarity when real embeddings are unavailable; the interface accepts an optional `embed` function for future 384d local embedder integration. HaluGard G2 claim-verify is a placeholder (length heuristic) pending SQLite evidence search.
-- Forge L3 persona/insight validation is advisory-only: validation flags are attached to insight metadata but never block storage. A hard gate is a future enhancement, not Phase 4.
+- Validation layer now acts as a **hard gate**: all enrichment outputs pass through `validate()` and `decide()` before persistence. Low-confidence or flagged outputs are routed to the `review_queue` instead of main storage.
+- Forge L3 persona/insight validation is now a hard gate: outputs with decision `review-queue` are not written to storage; `merge-warning` outputs are stored with warning metadata.
 - Cron scheduler daemon implemented in `src/scheduler.ts` via `capricorn cron`.
 
 ### Post-Review Fixes
@@ -129,11 +130,12 @@ Phase 3 ports the v1 enrichment pipeline to v2: Forge L1→L3, Dream preference 
 - Fixed `VaultSync` to preserve original vault signal IDs via `MemoryStore.importMemory`.
 - Fixed `DreamPipeline` single-pass confidence computation; trials now seed initial evidence.
 - Fixed `DreamPipeline` frontmatter parser so body content is no longer swallowed after the second `---`.
-- Added `stored.content` assertion to `src/intelligence/sync.test.ts`.
+- Added `stored.content` assertion to `src/storage/sync.test.ts`.
 - Updated `README.md` Phase status and corrected "L0→L3" to "L1→L3".
 - Fixed CLI `dream` help text and noted `context` outputs JSON.
 - Added `scripts/smoke-phase3.ts` and `bun run smoke:phase3` for automated Phase 3 smoke testing.
-- Documented Forge L3 validation as advisory-only.
+- Updated validation layer to a hard gate in `src/intelligence/forge.ts` and `src/intelligence/dream.ts`.
+- Moved `VaultSync` from `src/intelligence/sync.ts` to `src/storage/sync.ts` and updated all imports.
 - Removed committed review files (`review-*.md`) and added them to `.gitignore`.
 - Fixed `src/intelligence/forge.ts` duplicate L3 insight write that caused SQLite UNIQUE constraint failure.
 
@@ -161,7 +163,7 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 ### Verification
 
 - `bun run typecheck` — pass.
-- `bun run test` — 106 pass, 0 fail.
+- `bun run test` — 107 pass, 0 fail.
 - `bun run build` — pass.
 - `bun run smoke:phase3` — pass.
 - `bun run smoke:phase4` — pass.
@@ -191,7 +193,7 @@ Phase 4 completes the Capricorn v2 final release: distribution packaging, cron d
 ### Verification
 
 - `bun run typecheck` — pass.
-- `bun run test` — 106 pass, 0 fail.
+- `bun run test` — 107 pass, 0 fail.
 - `bun run build` — pass.
 - `bun run smoke:phase3` — pass.
 - `bun run smoke:phase4` — pass.
@@ -231,3 +233,34 @@ Verification:
 ---
 
 > Final product = Phase 1–6. Phase 7+ is future enhancement.
+
+## Code — DFD Alignment (DONE)
+
+Refactor Capricorn v2 code to match finalized DFD architecture.
+
+### Changes
+
+- Moved `VaultSync` from `src/intelligence/` to `src/storage/` (DFD places sync responsibility in Storage Engine).
+- Enforced Validation Layer as gatekeeper: `ForgePipeline` and `DreamPipeline` now call `validate()` + `decide()` before any persistence.
+- Added `Decision` type with three outputs: `auto-merge`, `merge-warning`, `review-queue`.
+- Added `review_queue` table and `MemoryStore` methods for queued items.
+- Updated `docs/PROGRESS.md` and `docs/directory-structure.html` references to `src/storage/sync.ts`.
+
+### Verification
+
+- `bun run typecheck` — pass
+- `bun run test` — 107 pass, 0 fail
+- `bun run build` — pass
+
+---
+
+## Directory Cleanup (DONE)
+
+Remove old standalone packages and temporary files before GitHub push. This is purely cleanup; it does not change Capricorn v2 architecture.
+
+### Changes
+
+- Removed top-level `bridge/` and `mind/` directories (old standalone packages, not referenced by `src/`).
+- Removed `review-*.md` scratch files.
+- Restored `docs/capricorn-dfd.html` to document current architecture.
+- Updated `.gitignore` to remove obsolete `bridge/`, `mind/`, `tencentdb/` entries.

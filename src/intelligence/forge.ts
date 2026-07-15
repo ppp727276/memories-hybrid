@@ -1,13 +1,15 @@
 import type { CapricornStorage } from "../storage/index.ts";
 import type { Memory } from "../types.ts";
 import type { LLMRunner } from "./llm.ts";
-import { validate } from "./validate.ts";
+import { validate, decide, type Decision } from "./validate.ts";
 
 export interface ForgeResult {
   processed: number;
   insights: number;
   personas: number;
   skipped: number;
+  reviewQueue: number;
+  warnings: number;
 }
 
 export class ForgePipeline {
@@ -29,6 +31,8 @@ export class ForgePipeline {
     let insights = 0;
     let personas = 0;
     let skipped = 0;
+    let reviewQueue = 0;
+    let warnings = 0;
 
     for (const memory of memories) {
       try {
@@ -36,43 +40,77 @@ export class ForgePipeline {
         processed++;
         insights += result.insights;
         personas += result.personas;
+        reviewQueue += result.reviewQueue;
+        warnings += result.warnings;
       } catch (err) {
         this.storage.memory.markEnrichmentStatus(memory.id, "failed", String(err));
         skipped++;
       }
     }
 
-    return { processed, insights, personas, skipped };
+    return { processed, insights, personas, skipped, reviewQueue, warnings };
   }
 
-  private async processMemory(memory: Memory, profile: string): Promise<{ insights: number; personas: number }> {
+  private async processMemory(memory: Memory, profile: string): Promise<{ insights: number; personas: number; reviewQueue: number; warnings: number }> {
     let insights = 0;
     let personas = 0;
+    let reviewQueue = 0;
+    let warnings = 0;
+
+    const existingPrefs = this.storage.memory.getAllPreferences().map((p) => p.body);
+    const latest = this.storage.memory.getLatestPersona(profile);
 
     // L1 extraction
     const l1 = await this.extract(memory);
     if (l1) {
-      this.storage.memory.addInsight(memory.id, "L1", l1, { layer: "L1" });
-      insights++;
+      const decision = await this.gate(memory.content, l1, existingPrefs, latest?.content);
+      if (decision === "auto-merge" || decision === "merge-warning") {
+        this.storage.memory.addInsight(memory.id, "L1", l1, { layer: "L1" });
+        insights++;
+        if (decision === "merge-warning") warnings++;
+      } else {
+        this.storage.memory.addReviewQueue("insight", l1, memory.id, 0, ["review_queue"]);
+        reviewQueue++;
+      }
     }
 
     // L2 scene synthesis
     const l2 = await this.synthesize(memory, l1);
     if (l2) {
-      this.storage.memory.addInsight(memory.id, "L2", l2, { layer: "L2" });
-      insights++;
+      const decision = await this.gate(memory.content, l2, existingPrefs, latest?.content);
+      if (decision === "auto-merge" || decision === "merge-warning") {
+        this.storage.memory.addInsight(memory.id, "L2", l2, { layer: "L2" });
+        insights++;
+        if (decision === "merge-warning") warnings++;
+      } else {
+        this.storage.memory.addReviewQueue("insight", l2, memory.id, 0, ["review_queue"]);
+        reviewQueue++;
+      }
     }
 
     // L3 persona generation
     const l3 = await this.generatePersona(memory, l1, l2, profile);
     if (l3) {
-      this.storage.memory.addInsight(memory.id, "L3", l3, { layer: "L3" });
-      this.storage.memory.savePersona(profile, l3);
-      personas++;
+      const decision = await this.gate(memory.content, l3, existingPrefs, latest?.content);
+      if (decision === "auto-merge" || decision === "merge-warning") {
+        this.storage.memory.addInsight(memory.id, "L3", l3, { layer: "L3" });
+        this.storage.memory.savePersona(profile, l3);
+        personas++;
+        if (decision === "merge-warning") warnings++;
+      } else {
+        this.storage.memory.addReviewQueue("persona", l3, memory.id, 0, ["review_queue"]);
+        reviewQueue++;
+      }
     }
 
     this.storage.memory.markEnrichmentStatus(memory.id, "done");
-    return { insights, personas };
+    return { insights, personas, reviewQueue, warnings };
+  }
+
+  private async gate(source: string, output: string, existingPreferences: string[], previousPersona?: string): Promise<Decision> {
+    const result = await validate({ source, output, existingPreferences, previousPersona });
+    const { decision } = decide(result);
+    return decision;
   }
 
   private async extract(memory: Memory): Promise<string | null> {
@@ -94,21 +132,6 @@ export class ForgePipeline {
     const latest = this.storage.memory.getLatestPersona(profile);
     const prompt = `Update the following persona based on the new memory. Return only the updated persona text.\n\nExisting persona: ${latest?.content ?? "(none)"}\nMemory: ${memory.content}\nInsight: ${l1 ?? ""}\nScene: ${l2 ?? ""}`;
     const text = await this.llm.complete(prompt, "You are a persona generation assistant.");
-    if (!text) return null;
-
-    const existingPrefs = this.storage.memory.getAllPreferences().map((p) => p.body);
-    const validation = await validate({
-      source: memory.content,
-      output: text,
-      existingPreferences: existingPrefs,
-      previousPersona: latest?.content,
-    });
-
-    if (validation.score < 0.4 || validation.flags.length > 0) {
-      // Advisory flag only; processMemory will store the insight
-      return text;
-    }
-
-    return text;
+    return text || null;
   }
 }

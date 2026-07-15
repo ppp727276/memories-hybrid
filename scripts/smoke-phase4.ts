@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { CapricornStorage } from "../src/storage/index.ts";
 import { ForgePipeline } from "../src/intelligence/forge.ts";
 import { DreamPipeline } from "../src/intelligence/dream.ts";
-import { VaultSync } from "../src/intelligence/sync.ts";
+import { VaultSync } from "../src/storage/sync.ts";
 import { createEmbedder } from "../src/embeddings.ts";
 import type { LLMRunner } from "../src/intelligence/llm.ts";
 
