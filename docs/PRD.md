@@ -188,19 +188,24 @@ Capricorn v2 final product is a standalone engine. Phase 6 brings parity with th
 - [x] Config-driven paths, LLM, embedding, and cron timing via `capricorn.config.json` (or `CAPRICORN_CONFIG` env override)
 - [x] Smoke test: signal → enrichment → persona written
 
-### Phase 7 — Advanced Local Models
+### Phase 7 — Production Readiness (Observability + Validation)
 
-- [ ] ONNX local embedder (EmbeddingGemma Q4, 768d) — real offline embedding
-- [ ] Validation-only local model (all-MiniLM-L6-v2 already used for 0-token validation)
-- [ ] Optional quantization and runtime selection
+- [ ] **Structured logging** — JSONL log to `~/.capricorn/logs/` (timestamp, level, component, message, error). Replace 11 silent catch blocks.
+- [ ] **Health check** — `capricorn health` command: DB accessible, vault writable, LLM reachable, embedder reachable. JSON status output.
+- [ ] **Metrics** — `capricorn stats` extended: `enrichment_queue_size`, `failed_count`, `last_bridge_run`, `last_dream_run`.
+- [ ] **Real validation layer** — G2 claim verify (search SQLite evidence), G3 semantic contradiction (via embedding), G4 semantic drift detection. Upgrade from `output.length > 20` placeholder.
+- [ ] **ONNX local embedding** — `all-MiniLM-L6-v2` (384d) via ONNX runtime. Fallback chain: API → ONNX → deterministic hash. Bun FFI binding.
+- [ ] **Integration tests** — E2E pipeline: `remember → bridge → dream → context`. Sync round-trip: vault file → SQLite → vault. OSB bridge: signals → persona.
+- [ ] **Persistent cron state** — SQLite `cron_state` table: `job_name`, `last_run`, `last_status`, `last_error`. Resume on restart. `capricorn cron status`.
+- [ ] **Memory lifecycle** — TTL, `capricorn forget --older-than`, archive table, auto-archive stale memories (confidence < 0.1, no evidence > 30d).
 
-### Phase 8 — Distribution & Scale
+### Phase 8 — Usability & Scale
 
-- [ ] Multi-vault support
-- [ ] Cloud sync (optional, v3)
-- [ ] Web dashboard for memory audit
-- [ ] Conflict resolution UI
-- [ ] LongMemEval / BEAM benchmark integration
+- [ ] **Conflict resolution UX** — `capricorn conflicts resolve --keep <id>`, semantic detection via embedding, auto-resolution (confidence margin > 0.3), conflict notification in `capricorn context`.
+- [ ] **Web dashboard** — `capricorn serve --ui` (port 7437). Memory list + search, preference graph, enrichment queue, review queue, conflict resolver. Pure HTML/JS, no framework.
+- [ ] **Multi-vault support** (optional, v3)
+- [ ] **Cloud sync** (optional, v3)
+- [ ] **LongMemEval / BEAM benchmark integration**
 
 ---
 
