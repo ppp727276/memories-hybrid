@@ -1,6 +1,6 @@
 # Progress — Capricorn v2
 
-> **Status: Final Product.** All planned phases (1–5) implemented. See [PRD](PRD.md) for feature breakdown.
+> **Status: Final Product.** All planned phases (1–6) implemented. See [PRD](PRD.md) for feature breakdown.
 
 ## Phase 1 — Storage Engine Core (DONE)
 
@@ -244,7 +244,7 @@ Refactor Capricorn v2 code to match finalized DFD architecture.
 - Enforced Validation Layer as gatekeeper: `ForgePipeline` and `DreamPipeline` now call `validate()` + `decide()` before any persistence.
 - Added `Decision` type with three outputs: `auto-merge`, `merge-warning`, `review-queue`.
 - Added `review_queue` table and `MemoryStore` methods for queued items.
-- Updated `docs/PROGRESS.md` and `docs/directory-structure.html` references to `src/storage/sync.ts`.
+- Updated `docs/PROGRESS.md` references to `src/storage/sync.ts`.
 
 ### Verification
 
@@ -261,6 +261,7 @@ Remove old standalone packages and temporary files before GitHub push. This is p
 ### Changes
 
 - Removed top-level `bridge/` and `mind/` directories (old standalone packages, not referenced by `src/`).
-- Removed `review-*.md` scratch files.
+- Removed `review-*.md` and `docs/review-*.md` scratch files.
+- Retained `forge/` directory for active red-team tests/utilities (109 tracked files).
 - Restored `docs/capricorn-dfd.html` to document current architecture.
-- Updated `.gitignore` to remove obsolete `bridge/`, `mind/`, `tencentdb/` entries.
+- Updated `.gitignore` to remove obsolete `bridge/`, `mind/`, `tencentdb/`, and `bridge-config*.json` entries.

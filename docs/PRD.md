@@ -84,7 +84,7 @@ AI agents forget everything between sessions. Existing memory tools (Uteke, Engr
 - [x] MD5-based checkpoint/idempotency per signal
 - [x] `capricorn bridge-osb` one-shot command for Hermes cron
 - [x] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
-- [x] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
+- [x] Config-driven paths, LLM, embedding, and cron timing via `capricorn.config.json` (or `CAPRICORN_CONFIG` env override)
 - [x] Smoke test: signal → enrichment → persona written
 
 ---
@@ -185,7 +185,7 @@ Capricorn v2 final product is a standalone engine. Phase 6 brings parity with th
 - [x] MD5-based checkpoint/idempotency per signal
 - [x] `capricorn bridge-osb` one-shot command for Hermes cron
 - [x] Persona merge into `persona-core.md` with `<!-- status: frozen -->` preservation
-- [x] Config-driven paths, LLM, embedding, and cron timing via `bridge-config.json`
+- [x] Config-driven paths, LLM, embedding, and cron timing via `capricorn.config.json` (or `CAPRICORN_CONFIG` env override)
 - [x] Smoke test: signal → enrichment → persona written
 
 ### Phase 7 — Advanced Local Models

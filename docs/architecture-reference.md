@@ -81,6 +81,7 @@ capricorn forget <id>
 capricorn stats                  --project
 capricorn ingest <file>
 capricorn bridge                 --dry-run
+capricorn bridge-osb             --dry-run
 capricorn dream                  --dry-run
 capricorn setup <agent>          claude | codex | cursor | hermes | windsurf | gemini
 capricorn init                   --vault <path>

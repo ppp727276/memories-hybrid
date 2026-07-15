@@ -1,10 +1,5 @@
 seed-output/
 seed-output-yandere/
-bridge-config.json
-bridge-config-yandere.json
-.hybrid-bridge-checkpoint.json
-.hybrid-bridge-checkpoint-default.json
-.hybrid-bridge-checkpoint-yandere.json
 node_modules/
 *.log
 forge/node_modules/
