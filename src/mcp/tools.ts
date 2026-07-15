@@ -222,7 +222,14 @@ export async function handleTool(
       return { status: "review_dismissed", id };
     }
     throw new Error(`unknown review subcommand: ${sub}`);
-  }
+      }
 
-  throw new Error(`unknown method: ${method}`);
+      if (method === "capricorn.health") {
+        const { checkHealth } = await import("../health.ts");
+        const { loadConfig } = await import("../config.ts");
+        const config = loadConfig();
+        return checkHealth(storage, config);
+      }
+
+      throw new Error(`unknown method: ${method}`);
 }

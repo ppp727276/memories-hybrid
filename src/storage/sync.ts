@@ -46,11 +46,12 @@ export class VaultSync {
   }
 
   private exportToVault(): number {
-    const unprocessed = this.storage.memory.getUnprocessedMemories(1000);
+    const unsynced = this.storage.memory.getUnsyncedMemories(1000);
     let count = 0;
-    for (const memory of unprocessed) {
+    for (const memory of unsynced) {
       try {
-        this.storage.vault.writeSignal(memory);
+        const path = this.storage.vault.writeSignal(memory);
+        this.storage.memory.markVaultSynced(memory.id, path);
         count++;
       } catch (err) {
         console.error("capricorn: sync vault write failed:", String(err));

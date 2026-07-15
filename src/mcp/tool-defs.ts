@@ -200,4 +200,9 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
   },
+  {
+    name: "capricorn.health",
+    description: "Run health check: DB, vault, LLM, embedding, disk",
+    parameters: { type: "object", properties: {} },
+  },
 ]

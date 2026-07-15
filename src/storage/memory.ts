@@ -345,7 +345,99 @@ export class MemoryStore {
       );
     }
 
-  private ftsSearch(queryText: string, limit: number, project: string | null): MemoryRow[] {
+    // Memory lifecycle
+    archiveMemory(id: string, reason = "manual"): boolean {
+      const memory = this.getById(id);
+      if (!memory) return false;
+      runSql(this.db, `INSERT INTO memories_archive (id, content, source, project, tags, metadata, original_created_at, archived_at, archive_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        memory.id, memory.content, memory.source, memory.project, JSON.stringify(memory.tags), JSON.stringify(memory.metadata), memory.created_at, Date.now(), reason);
+      return this.forget(id);
+    }
+
+    forgetOlderThan(days: number): number {
+      const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+      const rows = queryAll<{ id: string }>(this.db, "SELECT id FROM memories WHERE created_at < ?", cutoff);
+      let count = 0;
+      for (const row of rows) {
+        if (this.forget(row.id)) count++;
+      }
+      return count;
+    }
+
+    getStaleMemories(confidenceThreshold = 0.1, daysSinceEvidence = 30): Memory[] {
+      const cutoff = Date.now() - (daysSinceEvidence * 24 * 60 * 60 * 1000);
+      const rows = queryAll<Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }>(
+        this.db,
+        `SELECT m.* FROM memories m
+         LEFT JOIN preference_evidence pe ON m.id = pe.memory_id
+         WHERE m.created_at < ?
+         GROUP BY m.id
+         HAVING MAX(pe.created_at) IS NULL OR MAX(pe.created_at) < ?`,
+        cutoff, cutoff,
+      );
+      return rows.map((r) => ({ ...r, tags: parseTags(r.tags), metadata: JSON.parse(r.metadata) })) as Memory[];
+    }
+
+    // Vault sync state
+    markVaultSynced(memoryId: string, vaultPath: string): void {
+      runSql(this.db,
+        `INSERT INTO vault_sync_state (memory_id, vault_path, synced_at, status) VALUES (?, ?, ?, 'synced')
+         ON CONFLICT(memory_id) DO UPDATE SET vault_path = excluded.vault_path, synced_at = excluded.synced_at, status = 'synced'`,
+        memoryId, vaultPath, Date.now());
+    }
+
+    getUnsyncedMemories(limit = 1000): Memory[] {
+      const rows = queryAll<Omit<Memory, "tags" | "metadata"> & { tags: string; metadata: string }>(
+        this.db,
+        `SELECT m.* FROM memories m
+         LEFT JOIN vault_sync_state v ON m.id = v.memory_id
+         WHERE v.memory_id IS NULL
+         LIMIT ?`,
+        limit,
+      );
+      return rows.map((r) => ({ ...r, tags: parseTags(r.tags), metadata: JSON.parse(r.metadata) })) as Memory[];
+    }
+
+    // Cron state
+    getJobState(jobName: string): { lastRun: string; lastStatus: string; lastError: string | null } | null {
+      const row = queryGet<{ last_run: string; last_status: string; last_error: string | null }>(this.db, "SELECT last_run, last_status, last_error FROM cron_state WHERE job_name = ?", jobName);
+      return row ? { lastRun: row.last_run, lastStatus: row.last_status, lastError: row.last_error } : null;
+    }
+
+    saveJobState(jobName: string, lastRun: string, lastStatus: string, lastError?: string): void {
+      const now = Date.now();
+      runSql(this.db,
+        `INSERT INTO cron_state (job_name, last_run, last_status, last_error, run_count, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, ?)
+         ON CONFLICT(job_name) DO UPDATE SET
+           last_run = excluded.last_run,
+           last_status = excluded.last_status,
+           last_error = excluded.last_error,
+           run_count = cron_state.run_count + 1,
+           updated_at = excluded.updated_at`,
+        jobName, lastRun, lastStatus, lastError ?? null, now, now);
+    }
+
+    getEnrichmentQueueSize(): number {
+      return queryGet<{ c: number }>(this.db, "SELECT COUNT(*) as c FROM enrichment_state WHERE status = 'pending'")?.c ?? 0;
+    }
+
+    getFailedCount(): number {
+      return queryGet<{ c: number }>(this.db, "SELECT COUNT(*) as c FROM enrichment_state WHERE status = 'failed'")?.c ?? 0;
+    }
+
+    getLastBridgeRun(): string | null {
+      const row = this.getJobState("bridge");
+      return row?.lastRun ?? null;
+    }
+
+    getLastDreamRun(): string | null {
+          const row = this.getJobState("dream");
+          return row?.lastRun ?? null;
+        }
+
+      private ftsSearch(queryText: string, limit: number, project: string | null): MemoryRow[] {
     const projectClause = project ? "AND m.project = ?" : "";
     const match = `"${quoteFts5(queryText)}"*`;
     const params = project ? [match, project, limit] : [match, limit];

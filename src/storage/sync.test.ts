@@ -47,9 +47,12 @@ describe("VaultSync", () => {
 
   it("round-trips a DB memory to vault", async () => {
     const { memory } = await storage.remember({ content: "Round trip memory" });
+    // remember() already writes to vault via writeSignal() + markVaultSynced()
+    // sync() should find no unsynced memories
     const sync = new VaultSync(storage);
     const result = sync.sync();
-    expect(result.exported).toBeGreaterThanOrEqual(1);
+    expect(result.exported).toBe(0);
+    // vault file should already exist from remember()
     const inbox = join(tmp, "Brain", "inbox");
     let found = false;
     for (const entry of require("node:fs").readdirSync(inbox, { withFileTypes: true })) {

@@ -98,6 +98,8 @@ export class CapricornScheduler {
   }
 
   private async runBuiltIn(name: string) {
+    let lastStatus = "ok";
+    let lastError: string | undefined;
     try {
       switch (name) {
         case "bridge": {
@@ -118,7 +120,10 @@ export class CapricornScheduler {
         }
       }
     } catch (err) {
+      lastStatus = "failed";
+      lastError = String(err);
       console.error("capricorn: cron job failed:", String(err));
     }
+    this.storage.memory.saveJobState(name, new Date().toISOString(), lastStatus, lastError);
   }
 }

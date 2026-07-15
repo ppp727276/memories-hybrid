@@ -45,8 +45,9 @@ export class CapricornStorage {
         let vaultPath: string | undefined;
         if (writeVault) {
           try {
-            vaultPath = this.vault.writeSignal(memory);
-          } catch {
+                      vaultPath = this.vault.writeSignal(memory);
+                      this.memory.markVaultSynced(memory.id, vaultPath);
+                    } catch {
             this.memory.forget(memory.id);
             throw new Error("vault write failed, DB write rolled back");
           }
@@ -79,13 +80,17 @@ export class CapricornStorage {
   }
 
   stats() {
-    const base = this.memory.stats();
-    return {
-      ...base,
-      db_size: fileSize(this.dbPath),
-      vault_size: dirSize(this.vaultPath),
-    };
-  }
+      const base = this.memory.stats();
+      return {
+        ...base,
+        db_size: fileSize(this.dbPath),
+        vault_size: dirSize(this.vaultPath),
+        enrichment_queue: this.memory.getEnrichmentQueueSize(),
+        failed_enrichments: this.memory.getFailedCount(),
+        last_bridge: this.memory.getLastBridgeRun(),
+        last_dream: this.memory.getLastDreamRun(),
+      };
+    }
 
   close() {
     this.db.close();

@@ -238,6 +238,51 @@ DROP TABLE preference_evidence;
 ALTER TABLE preference_evidence_new RENAME TO preference_evidence;
 CREATE INDEX IF NOT EXISTS idx_pref_evidence_pref ON preference_evidence(pref_id);`,
   },
+  {
+    id: 7,
+    name: "cron state persistence",
+    sql: `CREATE TABLE IF NOT EXISTS cron_state (
+  job_name TEXT PRIMARY KEY,
+  last_run TEXT NOT NULL DEFAULT '',
+  last_status TEXT NOT NULL DEFAULT 'pending',
+  last_error TEXT,
+  run_count INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);`,
+  },
+  {
+    id: 8,
+    name: "vault sync state",
+    sql: `CREATE TABLE IF NOT EXISTS vault_sync_state (
+  memory_id TEXT PRIMARY KEY REFERENCES memories(id) ON DELETE CASCADE,
+  vault_path TEXT NOT NULL,
+  synced_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'synced'
+);
+
+CREATE INDEX IF NOT EXISTS idx_vault_sync_state_status ON vault_sync_state(status);`,
+  },
+  {
+    id: 9,
+    name: "memory lifecycle",
+    sql: `ALTER TABLE memories ADD COLUMN archived_at INTEGER;
+ALTER TABLE memories ADD COLUMN ttl_days INTEGER;
+
+CREATE TABLE IF NOT EXISTS memories_archive (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'user',
+  project TEXT,
+  tags TEXT DEFAULT '[]',
+  metadata TEXT DEFAULT '{}',
+  original_created_at INTEGER NOT NULL,
+  archived_at INTEGER NOT NULL,
+  archive_reason TEXT NOT NULL DEFAULT 'manual'
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_archive_created ON memories_archive(original_created_at);`,
+  },
 ];
 
 export function openDatabase(dbPath: string): Database {

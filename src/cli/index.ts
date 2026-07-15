@@ -348,29 +348,59 @@ async function main(argv: string[]) {
   }
 
   if (command === "review") {
-    const storage = makeStorage();
-    const sub = positional[1] ?? "list";
-    if (sub === "list") {
-      const status = (args.status as string) ?? null;
-      const limit = Number(args.limit ?? 100);
-      const items = storage.memory.getReviewQueue(status, limit);
-      console.log(JSON.stringify({ status: "review_list", count: items.length, items }, null, 2));
-    } else if (sub === "resolve") {
-      const id = positional[2];
-      if (!id) throw new Error("id required");
-      storage.memory.updateReviewStatus(id, "resolved");
-      console.log(JSON.stringify({ status: "review_resolved", id }, null, 2));
-    } else if (sub === "dismiss") {
-      const id = positional[2];
-      if (!id) throw new Error("id required");
-      storage.memory.updateReviewStatus(id, "dismissed");
-      console.log(JSON.stringify({ status: "review_dismissed", id }, null, 2));
-    } else {
-      console.log(JSON.stringify({ error: `unknown review subcommand: ${sub}` }, null, 2));
+      const storage = makeStorage();
+      const sub = positional[1] ?? "list";
+      if (sub === "list") {
+        const status = (args.status as string) ?? null;
+        const limit = Number(args.limit ?? 100);
+        const items = storage.memory.getReviewQueue(status, limit);
+        console.log(JSON.stringify({ status: "review_list", count: items.length, items }, null, 2));
+      } else if (sub === "resolve") {
+        const id = positional[2];
+        if (!id) throw new Error("id required");
+        storage.memory.updateReviewStatus(id, "resolved");
+        console.log(JSON.stringify({ status: "review_resolved", id }, null, 2));
+      } else if (sub === "dismiss") {
+        const id = positional[2];
+        if (!id) throw new Error("id required");
+        storage.memory.updateReviewStatus(id, "dismissed");
+        console.log(JSON.stringify({ status: "review_dismissed", id }, null, 2));
+      } else {
+        console.log(JSON.stringify({ error: `unknown review subcommand: ${sub}` }, null, 2));
+      }
+      storage.close();
+      return;
     }
-    storage.close();
-    return;
-  }
+
+    if (command === "health") {
+        const config = loadConfig();
+        const storage = makeStorage(config);
+        const { checkHealth } = await import("../health.ts");
+        const result = await checkHealth(storage, config);
+        console.log(JSON.stringify(result, null, 2));
+        storage.close();
+        return;
+      }
+
+      if (command === "archive") {
+        const id = positional[1];
+        if (!id) throw new Error("id required");
+        const storage = makeStorage();
+        const ok = storage.memory.archiveMemory(id);
+        console.log(JSON.stringify({ id, status: ok ? "archived" : "not_found" }, null, 2));
+        storage.close();
+        return;
+      }
+
+      if (command === "forget-older") {
+        const days = Number(positional[1] ?? 90);
+        if (Number.isNaN(days) || days < 1) throw new Error("days must be a positive number");
+        const storage = makeStorage();
+        const count = storage.memory.forgetOlderThan(days);
+        console.log(JSON.stringify({ status: "done", deleted: count, older_than_days: days }, null, 2));
+        storage.close();
+        return;
+      }
 
   console.log(`Usage: capricorn <command> [options]
 Commands:
@@ -394,7 +424,10 @@ Commands:
   conflicts
   relations <id>
   prompt-ops <list|report|create|duel|record> [--task context]
-  review <list|resolve|dismiss> [id] [--status pending|resolved|dismissed] [--limit n]`);
+  review <list|resolve|dismiss> [id] [--status pending|resolved|dismissed] [--limit n]
+  health
+  archive <id>
+  forget-older [days]`);
 }
 
 
