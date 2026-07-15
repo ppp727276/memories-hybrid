@@ -40,7 +40,18 @@ async function run() {
   await storage.remember({ content: "Capricorn sync smoke signal." });
   const sync = new VaultSync(storage);
   const syncResult = sync.sync();
-  if (syncResult.exported + syncResult.imported < 1) throw new Error(`sync exported ${syncResult.exported}`);
+  const { readdirSync: rd, readFileSync: rf } = await import("node:fs");
+  let vaultFound = false;
+  try {
+    for (const entry of rd(join(config.vault.path, "Brain", "inbox"), { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".md")) {
+        if (rf(join(config.vault.path, "Brain", "inbox", entry.name), "utf8").includes("Capricorn sync smoke signal")) {
+          vaultFound = true; break;
+        }
+      }
+    }
+  } catch {}
+  if (!vaultFound) throw new Error("vault file not found after remember()");
 
   const vec = await embedder.embed("dark mode");
   if (vec.length < 1) throw new Error("local embedder returned empty vector");

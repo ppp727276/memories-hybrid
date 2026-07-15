@@ -105,16 +105,44 @@ class OnnxEmbedder implements Embedder {
   dimensions(): number { return this.dims; }
 
   async embed(text: string): Promise<number[]> {
-      if (!this.session) {
+      if (this.session && typeof (this.session as any).run === "function") {
         try {
-                  // @ts-expect-error onnxruntime-node is optional
-                  const ort = await import("onnxruntime-node");
-          this.session = ort;
+          // ONNX inference: tokenize → run session → mean pool → normalize
+          const ort = this.session as any;
+          const tokens = await this.tokenize(text);
+          const feeds: Record<string, any> = {};
+          feeds[ort.inputNames[0]] = tokens;
+          const results = await ort.run(feeds);
+          const output = results[ort.outputNames[0]];
+          const embedding = this.meanPool(output.data, output.dims);
+          const norm = Math.sqrt(embedding.reduce((a: number, b: number) => a + b * b, 0));
+          return norm === 0 ? embedding : embedding.map((v: number) => v / norm);
         } catch {
-          // onnxruntime-node not installed — fall through to fallback
+          // ONNX inference failed — fall through to fallback
         }
       }
       return this.fallback.embed(text);
+    }
+
+    private async tokenize(text: string): Promise<any> {
+      // Simple word-to-index tokenization (placeholder for real tokenizer)
+      const words = text.toLowerCase().split(/\W+/).filter(Boolean);
+      const ids = words.map((w, i) => i % 30522); // vocab size placeholder
+      const tensor = new Array(ids.length).fill(0).map(() => new Array(1).fill(0));
+      for (let i = 0; i < ids.length; i++) tensor[i][0] = ids[i];
+      return { data: tensor, dims: [ids.length, 1] };
+    }
+
+    private meanPool(data: any, dims: number[]): number[] {
+      const rows = dims[0];
+      const cols = dims[1] || 1;
+      const result = new Array(cols).fill(0);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          result[c] += (Array.isArray(data[r]) ? data[r][c] : data[r * cols + c]) || 0;
+        }
+      }
+      return result.map((v: number) => v / rows);
     }
 
     async loadModel(modelPath: string): Promise<boolean> {

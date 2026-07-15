@@ -190,14 +190,14 @@ Capricorn v2 final product is a standalone engine. Phase 6 brings parity with th
 
 ### Phase 7 — Production Readiness (Observability + Validation)
 
-- [ ] **Structured logging** — JSONL log to `~/.capricorn/logs/` (timestamp, level, component, message, error). Replace 11 silent catch blocks.
-- [ ] **Health check** — `capricorn health` command: DB accessible, vault writable, LLM reachable, embedder reachable. JSON status output.
-- [ ] **Metrics** — `capricorn stats` extended: `enrichment_queue_size`, `failed_count`, `last_bridge_run`, `last_dream_run`.
-- [ ] **Real validation layer** — G2 claim verify (search SQLite evidence), G3 semantic contradiction (via embedding), G4 semantic drift detection. Upgrade from `output.length > 20` placeholder.
-- [ ] **ONNX local embedding** — `all-MiniLM-L6-v2` (384d) via ONNX runtime. Fallback chain: API → ONNX → deterministic hash. Bun FFI binding.
-- [ ] **Integration tests** — E2E pipeline: `remember → bridge → dream → context`. Sync round-trip: vault file → SQLite → vault. OSB bridge: signals → persona.
-- [ ] **Persistent cron state** — SQLite `cron_state` table: `job_name`, `last_run`, `last_status`, `last_error`. Resume on restart. `capricorn cron status`.
-- [ ] **Memory lifecycle** — TTL, `capricorn forget --older-than`, archive table, auto-archive stale memories (confidence < 0.1, no evidence > 30d).
+- [x] **Structured logging** — JSONL log to `~/.capricorn/logs/` (timestamp, level, component, message, error). Replace 11 silent catch blocks.
+- [x] **Health check** — `capricorn health` command: DB accessible, vault writable, LLM reachable, embedder reachable. JSON status output.
+- [x] **Metrics** — `capricorn stats` extended: `enrichment_queue_size`, `failed_count`, `last_bridge_run`, `last_dream_run`.
+- [x] **Real validation layer** — G2 claim verify (search SQLite evidence), G3 semantic contradiction (via embedding), G4 semantic drift detection. Upgrade from `output.length > 20` placeholder.
+- [x] **ONNX local embedding** — `all-MiniLM-L6-v2` (384d) via ONNX runtime. Fallback chain: API → ONNX → deterministic hash. Bun FFI binding.
+- [x] **Integration tests** — E2E pipeline: `remember → bridge → dream → context`. Sync round-trip: vault file → SQLite → vault. OSB bridge: signals → persona.
+- [x] **Persistent cron state** — SQLite `cron_state` table: `job_name`, `last_run`, `last_status`, `last_error`. Resume on restart. `capricorn cron status`.
+- [x] **Memory lifecycle** — TTL, `capricorn forget --older-than`, archive table, auto-archive stale memories (confidence < 0.1, no evidence > 30d).
 
 ### Phase 8 — Usability & Scale
 

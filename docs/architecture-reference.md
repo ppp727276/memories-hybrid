@@ -141,7 +141,7 @@ CAPRICORN_OFFLINE
 1. Agent: capricorn.remember "User prefers dark mode" --tags preference,ui
 2. SQLite INSERT → memories + memories_fts (auto)
 3. Vault write-through → Brain/inbox/sig-*.md
-4a. Bridge (6h): L0→L3 enrichment
+4a. Bridge (6h): L1→L3 enrichment
 4b. Dream (1h): match prefs → confidence → promote → active.md
 5. Next session: capricorn.context → 1 block (~3000 chars)
 ```

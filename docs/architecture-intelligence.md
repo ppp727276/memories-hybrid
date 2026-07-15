@@ -121,7 +121,7 @@ Example:
 ```
 Bridge cron (6h):
 
-  Forge L0→L3 → enrichment output
+  Forge L1→L3 → enrichment output
 
   VALIDATION (0 token, embeddings lokal):
   ┌─────────────────────────────────────────┐

@@ -33,7 +33,7 @@ export function parseSignalFile(content: string): Memory | null {
     project: frontmatter.project ?? null,
     tags: frontmatter.tags ? frontmatter.tags.split(",").map((t) => t.trim()) : [],
     metadata: {},
-    created_at: frontmatter.created_at ? new Date(frontmatter.created_at).getTime() : Date.now(),
+    created_at: frontmatter.created_at ? (() => { const ts = new Date(frontmatter.created_at).getTime(); return Number.isNaN(ts) ? Date.now() : ts; })() : Date.now(),
     updated_at: Date.now(),
   };
 }

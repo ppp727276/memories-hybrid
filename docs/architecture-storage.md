@@ -273,7 +273,7 @@ FALLBACK: no API key, no local model → FTS5-only recall
 ```
 
 **Async enrichment gap — not a problem:**
-- Bridge (6h): Forge L0→L3 enrichment
+- Bridge (6h): Forge L1→L3 enrichment
 - Dream (1h): Compound preferences + regenerate active.md
 - Memory tetap accessible via FTS5 recall setiap saat
 - Enrichment = bonus intelligence, bukan core function

@@ -41,9 +41,20 @@ try {
   console.log("dream ok:", dreamResult);
 
   await storage.remember({ content: "Round-trip smoke memory" });
-  const sync = new VaultSync(storage);
-  const syncResult = sync.sync();
-  if (syncResult.exported < 1) throw new Error(`sync exported ${syncResult.exported}, expected >= 1`);
+    const sync = new VaultSync(storage);
+    const syncResult = sync.sync();
+    const { readdirSync: rd, readFileSync: rf } = await import("node:fs");
+    let vaultFound = false;
+    try {
+      for (const entry of rd(join(tmp, "Brain", "inbox"), { withFileTypes: true })) {
+        if (entry.isFile() && entry.name.endsWith(".md")) {
+          if (rf(join(tmp, "Brain", "inbox", entry.name), "utf8").includes("Round-trip smoke memory")) {
+            vaultFound = true; break;
+          }
+        }
+      }
+    } catch {}
+    if (!vaultFound) throw new Error("vault file not found after remember()");
   console.log("sync ok:", syncResult);
 
   console.log("SMOKE PASS");

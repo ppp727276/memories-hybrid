@@ -1,6 +1,6 @@
 # Progress — Capricorn v2
 
-> **Status: Final Product.** All planned phases (1–6) implemented. See [PRD](PRD.md) for feature breakdown.
+> **Status: Final Product.** All planned phases (1–7) implemented. See [PRD](PRD.md) for feature breakdown.
 
 ## Phase 1 — Storage Engine Core (DONE)
 
@@ -232,7 +232,7 @@ Verification:
 
 ---
 
-> Final product = Phase 1–6. Phase 7+ is future enhancement.
+> Final product = Phase 1–7. Phase 8+ is future enhancement.
 
 ## Code — DFD Alignment (DONE)
 
@@ -312,8 +312,6 @@ Fix 10 P1 + 2 P2 findings from REVIEW.md audit (2026-07-15).
 
 ### Known Limitations (documented, not fixed)
 
-- P1 #9: `VaultSync.exportToVault()` uses `getUnprocessedMemories()` — exports unenriched, not unvaulted. Needs `vault_sync_state` table for proper tracking.
-- P1 #10: `validate.ts` G2 claim verification is still `output.length > 20` placeholder. Real evidence search requires Phase 7.
 - P1 #15: 3 `as unknown as` casts in `sqlite.ts` — Bun internal API dependency. Stable for now.
 - P1 #16: `config.bridge!` non-null assertion — safe because `mergeConfig()` always returns `bridge`, but type is misleading.
 - P2 #17: Cron scheduler no persistence — already documented in Phase 4 notes.

@@ -45,9 +45,9 @@ export class CapricornStorage {
         let vaultPath: string | undefined;
         if (writeVault) {
           try {
-                      vaultPath = this.vault.writeSignal(memory);
-                      this.memory.markVaultSynced(memory.id, vaultPath);
-                    } catch {
+            vaultPath = this.vault.writeSignal(memory);
+            this.memory.markVaultSynced(memory.id, vaultPath);
+          } catch {
             this.memory.forget(memory.id);
             throw new Error("vault write failed, DB write rolled back");
           }
