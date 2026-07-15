@@ -129,6 +129,8 @@ export class DreamPipeline {
       }
     }
 
+    if (!frontmatter.id) return null;
+
     return {
       id: frontmatter.id,
       content: body.trim(),

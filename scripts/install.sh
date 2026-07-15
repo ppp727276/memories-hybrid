@@ -28,10 +28,10 @@ if ! command -v bun &>/dev/null; then
 fi
 echo "  Bun: $(bun --version)"
 
-# Install npm dependencies
+# Install dependencies
 echo ""
 echo "[2/3] Installing dependencies..."
-npm install
+bun install
 echo -e "${GREEN}  Dependencies installed.${NC}"
 
 # Build distribution
@@ -46,7 +46,7 @@ echo -e "${GREEN}  Installation complete!${NC}"
 echo "============================================"
 echo ""
 echo "Next steps:"
-echo "  1. Initialize config and vault: capricorn init --vault ~/Documents/second-brain-memory"
+echo "  1. Initialize config and vault: capricorn init"
 echo "  2. Run storage tests:          bun test"
-echo "  3. Start MCP server:           capricorn serve"
+echo "  3. Start MCP server:           bun run src/mcp/server.ts"
 echo ""

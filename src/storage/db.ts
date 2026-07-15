@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE TABLE IF NOT EXISTS insights (
   id          TEXT PRIMARY KEY,
-  memory_id   TEXT NOT NULL REFERENCES memories(id),
+  memory_id   TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
   content     TEXT NOT NULL,
   layer       TEXT NOT NULL DEFAULT 'L1',
   metadata    TEXT DEFAULT '{}',
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS preferences (
 CREATE TABLE IF NOT EXISTS preference_evidence (
   id          TEXT PRIMARY KEY,
   pref_id     TEXT NOT NULL REFERENCES preferences(id),
-  memory_id   TEXT NOT NULL REFERENCES memories(id),
+  memory_id   TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
   result      TEXT NOT NULL,
   session_id  TEXT,
   created_at  INTEGER NOT NULL
@@ -203,6 +203,40 @@ CREATE TABLE IF NOT EXISTS review_queue (
 
 CREATE INDEX IF NOT EXISTS idx_review_queue_status ON review_queue(status);
 CREATE INDEX IF NOT EXISTS idx_review_queue_kind ON review_queue(kind);`,
+  },
+  {
+    id: 6,
+    name: "fk cascade fix",
+    sql: `-- Recreate insights with ON DELETE CASCADE (SQLite doesn't support ALTER TABLE ADD CONSTRAINT)
+CREATE TABLE IF NOT EXISTS insights_new (
+  id          TEXT PRIMARY KEY,
+  memory_id   TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  layer       TEXT NOT NULL DEFAULT 'L1',
+  metadata    TEXT DEFAULT '{}',
+  created_at  INTEGER NOT NULL,
+  UNIQUE(memory_id, layer)
+);
+INSERT OR IGNORE INTO insights_new SELECT * FROM insights;
+DROP TABLE insights;
+ALTER TABLE insights_new RENAME TO insights;
+CREATE INDEX IF NOT EXISTS idx_insights_memory ON insights(memory_id);
+
+-- Recreate preference_evidence with ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS preference_evidence_new (
+  id          TEXT PRIMARY KEY,
+  pref_id     TEXT NOT NULL REFERENCES preferences(id),
+  memory_id   TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  result      TEXT NOT NULL,
+  session_id  TEXT,
+  source_type TEXT DEFAULT 'user_explicit',
+  source_weight REAL DEFAULT 1.0,
+  created_at  INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO preference_evidence_new SELECT * FROM preference_evidence;
+DROP TABLE preference_evidence;
+ALTER TABLE preference_evidence_new RENAME TO preference_evidence;
+CREATE INDEX IF NOT EXISTS idx_pref_evidence_pref ON preference_evidence(pref_id);`,
   },
 ];
 
