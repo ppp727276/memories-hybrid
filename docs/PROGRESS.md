@@ -265,3 +265,27 @@ Remove old standalone packages and temporary files before GitHub push. This is p
 - Retained `forge/` directory for active red-team tests/utilities (109 tracked files).
 - Restored `docs/capricorn-dfd.html` to document current architecture.
 - Updated `.gitignore` to remove obsolete `bridge/`, `mind/`, `tencentdb/`, and `bridge-config*.json` entries.
+
+---
+
+## P0 Audit Fixes (DONE)
+
+Fix 6 P0 findings from REVIEW.md audit (2026-07-15).
+
+### Changes
+
+- `scripts/install.sh` — `npm install` → `bun install`, remove `--vault` flag from init instructions, `capricorn serve` → `bun run src/mcp/server.ts`
+- `src/storage/db.ts` — added `ON DELETE CASCADE` to `insights.memory_id` and `preference_evidence.memory_id` in migration 1 (new DBs) + migration 6 (existing DBs recreates tables)
+- `src/intelligence/dream.ts` — added `if (!frontmatter.id) return null` guard in `parseSignalFile()`, matching `VaultSync` behavior
+- `docs/architecture-reference.md` — restored from git history (was deleted but still referenced by ARCHITECTURE.md + PRD.md)
+
+### Verification
+
+- `bun run typecheck` — pass
+- `bun test` — 107 pass, 0 fail
+- `bun run build` — pass
+
+### Commits
+
+- `38ac5ae` — `docs: audit REVIEW.md (21 findings) + PRD Phase 7-8 concrete roadmap`
+- `c65f6d7` — `fix: P0 audit findings — install.sh, FK cascade, DreamPipeline null guard`
