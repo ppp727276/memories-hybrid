@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync, readdirSync, rmSync, readFileSync } from "nod
 import { join } from "node:path";
 import type { Memory } from "../types.ts";
 import { slugify } from "../utils/id.ts";
+import YAML from "yaml";
 
 export class VaultWriter {
   constructor(private vaultPath: string) {}
@@ -14,19 +15,8 @@ export class VaultWriter {
     const dir = join(this.vaultPath, "Brain", "inbox");
     mkdirSync(dir, { recursive: true });
     const path = join(dir, fileName);
-    const frontmatter = [
-      "---",
-      `id: ${memory.id}`,
-      `source: ${memory.source}`,
-      `session_id: ${memory.session_id ?? ""}`,
-      `project: ${memory.project ?? ""}`,
-      `tags: ${memory.tags.join(", ")}`,
-      `created_at: ${date.toISOString()}`,
-      "---",
-      "",
-      memory.content,
-      "",
-    ].join("\n");
+    const metadata = YAML.stringify({ id: memory.id, source: memory.source, session_id: memory.session_id, project: memory.project, tags: memory.tags, created_at: date.toISOString() }).trimEnd();
+    const frontmatter = ["---", metadata, "---", "", memory.content, ""].join("\n");
     writeFileSync(path, frontmatter);
     return path;
   }

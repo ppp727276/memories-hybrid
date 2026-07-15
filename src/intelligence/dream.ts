@@ -29,6 +29,11 @@ export class DreamPipeline {
     let warnings = 0;
 
     for (const signal of signals) {
+      // preference_evidence.memory_id is a real FK; signals discovered directly
+      // from the vault must exist in memories before evidence is recorded.
+      if (!this.storage.memory.getById(signal.id)) {
+        this.storage.memory.importMemory(signal);
+      }
       const match = await this.findMatch(signal, prefs);
       if (match) {
         this.applyEvidence(match, signal);

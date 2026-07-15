@@ -1,39 +1,38 @@
 import type { Memory } from "../types.ts";
+import YAML from "yaml";
 
 export function parseSignalFile(content: string): Memory | null {
-  const lines = content.split("\n");
-  const frontmatter: Record<string, string> = {};
-  let inFrontmatter = false;
-  let started = false;
-  let body = "";
-  for (const line of lines) {
-    const isDelimiter = line.trim() === "---";
-    if (isDelimiter && !started) {
-      inFrontmatter = true;
-      started = true;
-      continue;
-    }
-    if (isDelimiter && started && inFrontmatter) {
-      inFrontmatter = false;
-      continue;
-    }
-    if (inFrontmatter) {
-      const [key, ...rest] = line.split(":");
-      if (key && rest.length > 0) frontmatter[key.trim()] = rest.join(":").trim();
-    } else {
-      body += line + "\n";
-    }
+  const match = content.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)([\s\S]*)$/);
+  if (!match) return null;
+
+  let frontmatter: Record<string, unknown>;
+  try {
+    const parsed = YAML.parse(match[1]);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    frontmatter = parsed as Record<string, unknown>;
+  } catch {
+    return null;
   }
-  if (!frontmatter.id) return null;
+
+  if (typeof frontmatter.id !== "string" || !frontmatter.id.trim()) return null;
+  const created = typeof frontmatter.created_at === "string" || typeof frontmatter.created_at === "number"
+    ? new Date(frontmatter.created_at).getTime()
+    : Date.now();
+  const tags = Array.isArray(frontmatter.tags)
+    ? frontmatter.tags.map(String)
+    : typeof frontmatter.tags === "string"
+      ? frontmatter.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+      : [];
+
   return {
     id: frontmatter.id,
-    content: body.trim(),
-    source: frontmatter.source ?? "user",
-    session_id: frontmatter.session_id ?? null,
-    project: frontmatter.project ?? null,
-    tags: frontmatter.tags ? frontmatter.tags.split(",").map((t) => t.trim()) : [],
+    content: match[2].trim(),
+    source: typeof frontmatter.source === "string" ? frontmatter.source : "user",
+    session_id: typeof frontmatter.session_id === "string" && frontmatter.session_id ? frontmatter.session_id : null,
+    project: typeof frontmatter.project === "string" && frontmatter.project ? frontmatter.project : null,
+    tags,
     metadata: {},
-    created_at: frontmatter.created_at ? (() => { const ts = new Date(frontmatter.created_at).getTime(); return Number.isNaN(ts) ? Date.now() : ts; })() : Date.now(),
+    created_at: Number.isNaN(created) ? Date.now() : created,
     updated_at: Date.now(),
   };
 }

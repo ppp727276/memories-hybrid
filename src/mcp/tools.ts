@@ -2,6 +2,13 @@ import type { CapricornStorage } from "../storage/index.ts";
 import { loadConfig } from "../config.ts";
 import { createLLMRunner } from "../intelligence/index.ts";
 
+const MAX_LIMIT = 100;
+const MAX_BATCH = 100;
+function bounded(value: unknown, fallback: number, max: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 1 ? Math.min(Math.floor(n), max) : fallback;
+}
+
 export async function handleTool(
   req: { method: string; params?: Record<string, unknown> },
   storage: CapricornStorage,
@@ -24,14 +31,14 @@ export async function handleTool(
 
   if (method === "capricorn.recall") {
     const query = String(params.query ?? "");
-    const topK = Number(params.top_k ?? 5);
+    const topK = bounded(params.top_k, 5, MAX_LIMIT);
     const project = params.project ? String(params.project) : null;
     return { results: await storage.recall(query, topK, project) };
   }
 
   if (method === "capricorn.search") {
     const query = String(params.query ?? "");
-    const limit = Number(params.limit ?? 10);
+    const limit = bounded(params.limit, 10, MAX_LIMIT);
     const project = params.project ? String(params.project) : null;
     return { results: storage.search(query, limit, project) };
   }
@@ -48,7 +55,7 @@ export async function handleTool(
   }
 
   if (method === "capricorn.context") {
-    const maxChars = Number(params.max_chars ?? 3000);
+    const maxChars = bounded(params.max_chars, 3000, 100_000);
     const profile = String(params.profile ?? "default");
     const confirmed = storage.memory.getAllPreferences().filter((p) => p.tier === "confirmed");
     const persona = storage.memory.getLatestPersona(profile);
@@ -69,7 +76,7 @@ export async function handleTool(
   }
 
   if (method === "capricorn.ingest") {
-    const memories = Array.isArray(params.memories) ? params.memories : [];
+    const memories = Array.isArray(params.memories) ? params.memories.slice(0, MAX_BATCH) : [];
     const ids: string[] = [];
     for (const m of memories) {
       if (m && typeof m === "object" && "content" in m) {
@@ -110,7 +117,7 @@ export async function handleTool(
 
   if (method === "capricorn.bridge") {
     const profile = String(params.profile ?? "default");
-    const batch_size = Number(params.batch_size ?? 10);
+    const batch_size = bounded(params.batch_size, 10, MAX_BATCH);
     const { createLLMRunner, ForgePipeline } = await import("../intelligence/index.ts");
     const llm = createLLMRunner(loadConfig());
     const forge = new ForgePipeline(storage, llm);

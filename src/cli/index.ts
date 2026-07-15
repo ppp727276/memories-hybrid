@@ -158,10 +158,16 @@ async function main(argv: string[]) {
 
   if (command === "setup") {
     const agent = positional[1];
-    const entry = resolve(dirname(fileURLToPath(import.meta.url)), "..", "mcp", "server.ts");
-    const isBinary = process.execPath.endsWith(".exe") || process.argv[0]?.endsWith(".exe");
-    const mcpCommand = isBinary ? process.execPath : "bun";
-    const mcpArgs = isBinary ? ["mcp"] : [entry];
+    // Bun itself is an .exe on Windows; detect compiled Capricorn by the
+    // absence of a script entry, not by process.execPath's suffix.
+    const isBinary = !process.argv[1] || process.argv[1].toLowerCase().endsWith(".exe");
+    // Bundled CLI: invoke this same CLI with the explicit `mcp` subcommand.
+    // Dev CLI: reuse the current entry script; never point at a source-only MCP path.
+    const mcpCommand = isBinary ? process.execPath : process.execPath;
+    const mcpEntry = isBinary
+      ? undefined
+      : (process.argv[1] ?? resolve(dirname(fileURLToPath(import.meta.url)), "cli.mjs"));
+    const mcpArgs = isBinary ? ["mcp"] : [mcpEntry, "mcp"];
     const agents: Record<string, { path: string; transform?: (cfg: object) => object }> = {
       hermes: { path: join(homedir(), ".hermes", "mcp.json") },
       claude: { path: join(homedir(), ".claude", "mcp.json") },
@@ -172,17 +178,19 @@ async function main(argv: string[]) {
     if (!(agent in agents)) throw new Error(`unknown agent: ${agent}`);
     const { path } = agents[agent];
     mkdirSync(dirname(path), { recursive: true });
+    let config: Record<string, any> = {};
     if (existsSync(path)) {
-      renameSync(path, `${path}.bak.${Date.now()}`);
+      try {
+        config = JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
+      } catch {
+        renameSync(path, `${path}.bak.${Date.now()}`);
+        config = {};
+      }
     }
-    const config = {
-          mcpServers: {
-            capricorn: {
-              command: mcpCommand,
-              args: mcpArgs,
-            },
-          },
-        };
+    config.mcpServers = {
+      ...(config.mcpServers && typeof config.mcpServers === "object" ? config.mcpServers : {}),
+      capricorn: { command: mcpCommand, args: mcpArgs },
+    };
     writeFileSync(path, JSON.stringify(config, null, 2));
     console.log(JSON.stringify({ status: "configured", agent, path }, null, 2));
     return;

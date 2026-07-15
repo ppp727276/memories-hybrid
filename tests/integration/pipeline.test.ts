@@ -79,9 +79,10 @@ describe("Integration — E2E pipeline", () => {
   });
 
   it("vault sync state tracking", () => {
-    storage.memory.markVaultSynced("mem_test", "/tmp/test.md");
+    const memory = storage.memory.remember({ content: "sync state fixture" });
+    storage.memory.markVaultSynced(memory.id, "/tmp/test.md");
     const unsynced = storage.memory.getUnsyncedMemories();
-    expect(unsynced.every((m) => m.id !== "mem_test")).toBe(true);
+    expect(unsynced.every((m) => m.id !== memory.id)).toBe(true);
   });
 });
 

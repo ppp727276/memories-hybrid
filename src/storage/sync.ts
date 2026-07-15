@@ -14,14 +14,15 @@ export class VaultSync {
   constructor(private storage: CapricornStorage) {}
 
   sync(): SyncResult {
-    const imported = this.importFromVault();
+    const { imported, conflicts } = this.importFromVault();
     const exported = this.exportToVault();
-    return { imported: imported.length, exported, conflicts: 0 };
+    return { imported: imported.length, exported, conflicts };
   }
 
-  private importFromVault(): Memory[] {
+  private importFromVault(): { imported: Memory[]; conflicts: number } {
     const inbox = join(this.storage.vaultPath, "Brain", "inbox");
     const imported: Memory[] = [];
+    let conflicts = 0;
     try {
       for (const entry of readdirSync(inbox, { withFileTypes: true })) {
         if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
@@ -34,6 +35,9 @@ export class VaultSync {
           if (!existing) {
             this.storage.memory.importMemory(memory);
             imported.push(memory);
+          } else if (existing.content !== memory.content || existing.source !== memory.source || existing.project !== memory.project || existing.tags.join(",") !== memory.tags.join(",")) {
+            conflicts++;
+            console.warn(`capricorn: vault sync conflict for ${memory.id}; DB preserved`);
           }
         } catch (err) {
           console.error("capricorn: sync signal parse failed:", String(err));
@@ -42,7 +46,7 @@ export class VaultSync {
     } catch (err) {
       console.error("capricorn: sync inbox read failed:", String(err));
     }
-    return imported;
+    return { imported, conflicts };
   }
 
   private exportToVault(): number {

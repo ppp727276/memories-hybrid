@@ -287,7 +287,9 @@ CREATE INDEX IF NOT EXISTS idx_memories_archive_created ON memories_archive(orig
 
 export function openDatabase(dbPath: string): Database {
   mkdirSync(dirname(dbPath) || ".", { recursive: true });
-  return new Database(dbPath, { create: true });
+  const db = new Database(dbPath, { create: true });
+  db.exec("PRAGMA foreign_keys = ON;");
+  return db;
 }
 
 export function migrate(db: Database): void {
@@ -305,7 +307,14 @@ export function migrate(db: Database): void {
 
   for (const migration of MIGRATIONS) {
     if (applied.has(migration.id)) continue;
-    db.exec(migration.sql);
-    runSql(db, "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)", migration.id, migration.name, Date.now());
+    db.exec("BEGIN");
+    try {
+      db.exec(migration.sql);
+      runSql(db, "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)", migration.id, migration.name, Date.now());
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
   }
 }

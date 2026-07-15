@@ -36,8 +36,14 @@
     "url": "https://github.com/ppp727276/memories-hybrid"
   },
   "license": "MIT",
+  "files": [
+    "dist/cli.mjs",
+    "dist/index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
-    "node": ">=22.0.0"
+    "bun": ">=1.3.14"
   },
   "dependencies": {
     "glob": "^13.0.6",
