@@ -11,7 +11,7 @@ export const DEFAULT_CONFIG: CapricornConfig = {
   storage: {
     db_path: join(DATA_DEFAULT, "capricorn.db"),
     vector_provider: "api",
-    vector_model: "text-embedding-v3",
+    vector_model: "queen/text-embedding-v4",
     vector_dimensions: 1024,
   },
   intelligence: {
@@ -19,10 +19,10 @@ export const DEFAULT_CONFIG: CapricornConfig = {
       enabled: true,
       schedule: "0 */6 * * *",
       llm_provider: "omniroute",
-      llm_model: "deepseek-v4-pro",
-      embedding_provider: "openai",
-      embedding_model: "text-embedding-v3",
-      batch_size: 100,
+      llm_model: "queen/qwen3.6-plus",
+      embedding_provider: "omniroute",
+      embedding_model: "queen/text-embedding-v4",
+      batch_size: 10,
     },
     dream: {
       enabled: true,

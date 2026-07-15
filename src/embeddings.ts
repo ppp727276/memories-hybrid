@@ -56,7 +56,7 @@ class ApiEmbedder implements Embedder {
 
   constructor(config: CapricornConfig) {
     this.apiKey = process.env.CAPRICORN_EMBEDDING_API_KEY;
-    this.baseUrl = process.env.CAPRICORN_EMBEDDING_BASE_URL ?? "https://api.openai.com/v1";
+    this.baseUrl = process.env.CAPRICORN_EMBEDDING_BASE_URL ?? "http://localhost:20128/v1";
     this.model = config.storage.vector_model;
     this.dims = config.storage.vector_dimensions;
   }
