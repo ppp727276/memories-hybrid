@@ -289,3 +289,43 @@ Fix 6 P0 findings from REVIEW.md audit (2026-07-15).
 
 - `38ac5ae` — `docs: audit REVIEW.md (21 findings) + PRD Phase 7-8 concrete roadmap`
 - `c65f6d7` — `fix: P0 audit findings — install.sh, FK cascade, DreamPipeline null guard`
+
+---
+
+## P1/P2 Audit Fixes (DONE)
+
+Fix 10 P1 + 2 P2 findings from REVIEW.md audit (2026-07-15).
+
+### P1 Changes
+
+- All 11 silent `catch {}` blocks → `catch (err) { console.error("capricorn: ...", String(err)) }` — config, mcp/server, vault, sync, dream, osb, scheduler
+- `parseSignalFile()` extracted to `src/utils/signal.ts` — shared by `dream.ts` and `sync.ts`, removed duplicate implementations
+- `CapricornStorage.remember()` — vault write failure now rolls back DB write via `this.memory.forget()`
+- `MemoryStore` — added `getCheckpoint()` and `saveCheckpoint()` methods; `OsbBridge` now uses these instead of raw `this.storage.db` access
+- `relations` command — chronological sort (`created_at` desc), limit 50, added `related_count` field
+- `benchmark` command — helpful message for empty DB instead of generic error
+
+### P2 Changes
+
+- `tsconfig.json` — removed stale `bridge` and `mind` excludes (directories deleted in earlier cleanup)
+- `scheduler.ts` — `cronMatch()` validates pattern has at least 5 parts before parsing
+
+### Known Limitations (documented, not fixed)
+
+- P1 #9: `VaultSync.exportToVault()` uses `getUnprocessedMemories()` — exports unenriched, not unvaulted. Needs `vault_sync_state` table for proper tracking.
+- P1 #10: `validate.ts` G2 claim verification is still `output.length > 20` placeholder. Real evidence search requires Phase 7.
+- P1 #15: 3 `as unknown as` casts in `sqlite.ts` — Bun internal API dependency. Stable for now.
+- P1 #16: `config.bridge!` non-null assertion — safe because `mergeConfig()` always returns `bridge`, but type is misleading.
+- P2 #17: Cron scheduler no persistence — already documented in Phase 4 notes.
+- P2 #18: No `capricorn.config.json` example — auto-generated on `init`.
+- P2 #20: `prompt-ops record` CLI incomplete vs MCP — CLI passes empty `input`/`output`.
+
+### Verification
+
+- `bun run typecheck` — pass
+- `bun test` — 107 pass, 0 fail
+- `bun run build` — pass
+
+### Commits
+
+- `9e3ff63` — `fix: P1/P2 audit findings — logging, DRY, data integrity, UX`
