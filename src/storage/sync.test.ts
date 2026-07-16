@@ -47,12 +47,9 @@ describe("VaultSync", () => {
 
   it("round-trips a DB memory to vault", async () => {
     const { memory } = await storage.remember({ content: "Round trip memory" });
-    // remember() already writes to vault via writeSignal() + markVaultSynced()
-    // sync() should find no unsynced memories
     const sync = new VaultSync(storage);
     const result = sync.sync();
     expect(result.exported).toBe(0);
-    // vault file should already exist from remember()
     const inbox = join(tmp, "Brain", "inbox");
     let found = false;
     for (const entry of require("node:fs").readdirSync(inbox, { withFileTypes: true })) {
@@ -64,5 +61,40 @@ describe("VaultSync", () => {
       }
     }
     expect(found).toBe(true);
+  });
+
+  it("detects conflicts and preserves DB by default", async () => {
+    const id = "mem_conflict_1";
+    await storage.remember({ content: "DB version", source: "user" });
+    // Overwrite the just-written vault file with different content
+    const inbox = join(tmp, "Brain", "inbox");
+    const entries = require("node:fs").readdirSync(inbox, { withFileTypes: true });
+    const sigFile = entries.find((e: any) => e.isFile() && e.name.endsWith(".md"));
+    if (sigFile) {
+      const dbMem = await storage.remember({ content: "DB version", source: "user" });
+      writeFileSync(join(inbox, sigFile.name), `---\nid: ${dbMem.memory.id}\nsource: user\ncreated_at: ${new Date().toISOString()}\n---\nVault edited version`);
+      const sync = new VaultSync(storage);
+      const result = sync.sync();
+      expect(result.conflicts).toBeGreaterThanOrEqual(1);
+      expect(result.resolved).toBe(0);
+      const stored = storage.memory.getById(dbMem.memory.id);
+      expect(stored?.content).toBe("DB version");
+    }
+  });
+
+  it("resolves conflicts with --prefer-vault", async () => {
+    const { memory } = await storage.remember({ content: "DB original" });
+    const inbox = join(tmp, "Brain", "inbox");
+    const entries = require("node:fs").readdirSync(inbox, { withFileTypes: true });
+    const sigFile = entries.find((e: any) => e.isFile() && e.name.endsWith(".md"));
+    if (sigFile) {
+      writeFileSync(join(inbox, sigFile.name), `---\nid: ${memory.id}\nsource: user\ncreated_at: ${new Date().toISOString()}\n---\nVault wins`);
+      const sync = new VaultSync(storage);
+      const result = sync.sync(true);
+      expect(result.conflicts).toBeGreaterThanOrEqual(1);
+      expect(result.resolved).toBeGreaterThanOrEqual(1);
+      const stored = storage.memory.getById(memory.id);
+      expect(stored?.content).toBe("Vault wins");
+    }
   });
 });
