@@ -219,13 +219,14 @@ async function main(argv: string[]) {
   }
 
   if (command === "sync") {
-    const storage = makeStorage();
-    const sync = new VaultSync(storage);
-    const result = sync.sync();
-    console.log(JSON.stringify({ status: "sync_complete", result }, null, 2));
-    storage.close();
-    return;
-  }
+      const storage = makeStorage();
+      const sync = new VaultSync(storage);
+      const preferVault = args["prefer-vault"] === true;
+      const result = sync.sync(preferVault);
+      console.log(JSON.stringify({ status: "sync_complete", result }, null, 2));
+      storage.close();
+      return;
+    }
 
   if (command === "cron") {
     const config = loadConfig();

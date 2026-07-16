@@ -8,18 +8,20 @@ export interface SyncResult {
   imported: number;
   exported: number;
   conflicts: number;
+  resolved: number;
 }
 
 export class VaultSync {
   constructor(private storage: CapricornStorage) {}
 
-  sync(): SyncResult {
-    const { imported, conflicts } = this.importFromVault();
+  sync(preferVault = false): SyncResult {
+    const { imported, conflicts } = this.importFromVault(preferVault);
     const exported = this.exportToVault();
-    return { imported: imported.length, exported, conflicts };
+    const resolved = preferVault ? conflicts : 0;
+    return { imported: imported.length, exported, conflicts, resolved };
   }
 
-  private importFromVault(): { imported: Memory[]; conflicts: number } {
+  private importFromVault(preferVault: boolean): { imported: Memory[]; conflicts: number } {
     const inbox = join(this.storage.vaultPath, "Brain", "inbox");
     const imported: Memory[] = [];
     let conflicts = 0;
@@ -37,7 +39,14 @@ export class VaultSync {
             imported.push(memory);
           } else if (existing.content !== memory.content || existing.source !== memory.source || existing.project !== memory.project || existing.tags.join(",") !== memory.tags.join(",")) {
             conflicts++;
-            console.warn(`capricorn: vault sync conflict for ${memory.id}; DB preserved`);
+            if (preferVault) {
+              this.storage.memory.forget(memory.id);
+              this.storage.memory.importMemory(memory);
+              imported.push(memory);
+              console.warn(`capricorn: vault sync conflict for ${memory.id}; vault overwrote DB`);
+            } else {
+              console.warn(`capricorn: vault sync conflict for ${memory.id}; DB preserved`);
+            }
           }
         } catch (err) {
           console.error("capricorn: sync signal parse failed:", String(err));

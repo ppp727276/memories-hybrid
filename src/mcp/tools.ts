@@ -134,11 +134,12 @@ export async function handleTool(
   }
 
   if (method === "capricorn.sync") {
-    const { VaultSync } = await import("../storage/index.ts");
-    const sync = new VaultSync(storage);
-    const result = sync.sync();
-    return { status: "sync_complete", result };
-  }
+      const { VaultSync } = await import("../storage/index.ts");
+      const sync = new VaultSync(storage);
+      const preferVault = params.prefer_vault === true;
+      const result = sync.sync(preferVault);
+      return { status: "sync_complete", result };
+    }
 
   if (method === "capricorn.explain") {
     const id = String(params.id ?? "");
